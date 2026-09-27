@@ -1,0 +1,211 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Codex Nexus — Monokai Markdown Color & Typography Theme
+   Dedicated syntax color palette for conversation text, headings, code,
+   blockquotes, lists, and tables in Codex Desktop & Webview.
+   Preserves native font family and layout direction.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Monokai Palette Tokens (Light Theme) ── */
+:root {
+  --mk-bg: #FAF8F2;
+  --mk-text: #403E41;
+  --mk-h1: #D81B60;
+  --mk-h2: #E56B2F;
+  --mk-h3: #B88600;
+  --mk-h4: #4F8A10;
+  --mk-h5: #008C95;
+  --mk-h6: #7655B8;
+  --mk-bold: #272522;
+  --mk-italic: #7655B8;
+  --mk-link: #008C95;
+  --mk-link-hover: #4F8A10;
+  --mk-inline-code-text: #C2185B;
+  --mk-inline-code-bg: #F1EEE5;
+  --mk-code-block-bg: #F1EEE5;
+  --mk-blockquote: #4F8A10;
+  --mk-blockquote-bg: rgba(79, 138, 16, 0.06);
+  --mk-highlight: #D4A017;
+  --mk-muted: #78716C;
+  --mk-border: #D6D3D1;
+}
+
+/* ── Monokai Palette Tokens (Dark Theme) ── */
+body.dark,
+body.vscode-dark,
+body.vscode-high-contrast,
+:root[data-theme="dark"],
+[data-theme="dark"],
+[data-vscode-theme-kind*="dark"],
+[data-vscode-theme-kind*="high-contrast"] {
+  --mk-bg: #2D2A2E;
+  --mk-text: #FCFCFA;
+  --mk-h1: #FF6188;
+  --mk-h2: #FC9867;
+  --mk-h3: #FFD866;
+  --mk-h4: #A9DC76;
+  --mk-h5: #78DCE8;
+  --mk-h6: #AB9DF2;
+  --mk-bold: #FFFFFF;
+  --mk-italic: #AB9DF2;
+  --mk-link: #78DCE8;
+  --mk-link-hover: #A9DC76;
+  --mk-inline-code-text: #FFD866;
+  --mk-inline-code-bg: #221F22;
+  --mk-code-block-bg: #221F22;
+  --mk-blockquote: #A9DC76;
+  --mk-blockquote-bg: rgba(169, 220, 118, 0.06);
+  --mk-highlight: #FC9867;
+  --mk-muted: #939293;
+  --mk-border: #403E41;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not(.vscode-light) {
+    --mk-bg: #2D2A2E;
+    --mk-text: #FCFCFA;
+    --mk-h1: #FF6188;
+    --mk-h2: #FC9867;
+    --mk-h3: #FFD866;
+    --mk-h4: #A9DC76;
+    --mk-h5: #78DCE8;
+    --mk-h6: #AB9DF2;
+    --mk-bold: #FFFFFF;
+    --mk-italic: #AB9DF2;
+    --mk-link: #78DCE8;
+    --mk-link-hover: #A9DC76;
+    --mk-inline-code-text: #FFD866;
+    --mk-inline-code-bg: #221F22;
+    --mk-code-block-bg: #221F22;
+    --mk-blockquote: #A9DC76;
+    --mk-blockquote-bg: rgba(169, 220, 118, 0.06);
+    --mk-highlight: #FC9867;
+    --mk-muted: #939293;
+    --mk-border: #403E41;
+  }
+}
+
+/* ── Headings (H1 - H6) ── */
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) h1 {
+  color: var(--mk-h1) !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) h2 {
+  color: var(--mk-h2) !important;
+  font-weight: 800 !important;
+  line-height: 1.4 !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) h3 {
+  color: var(--mk-h3) !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) h4 {
+  color: var(--mk-h4) !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) h5 {
+  color: var(--mk-h5) !important;
+  font-weight: 600 !important;
+  line-height: 1.55 !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) h6 {
+  color: var(--mk-h6) !important;
+  font-weight: 600 !important;
+  line-height: 1.6 !important;
+}
+
+/* ── Typography & Inline Elements ── */
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) :is(strong, b) {
+  color: var(--mk-bold) !important;
+  font-weight: 800 !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) :is(em, i) {
+  color: var(--mk-italic) !important;
+  font-style: italic !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) a {
+  color: var(--mk-link) !important;
+  text-underline-offset: 0.18em !important;
+  transition: color 0.15s ease;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) a:hover {
+  color: var(--mk-link-hover) !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) mark {
+  color: var(--mk-highlight) !important;
+  background-color: color-mix(in srgb, var(--mk-highlight) 18%, transparent) !important;
+  border-radius: 3px !important;
+  padding: 1px 4px !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) hr {
+  border: 0 !important;
+  border-top: 1px solid var(--mk-border) !important;
+  margin: 16px 0 !important;
+}
+
+/* ── Inline Code & Monospace ── */
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) code:not(pre code) {
+  color: var(--mk-inline-code-text) !important;
+  background-color: var(--mk-inline-code-bg) !important;
+  padding: 2px 7px !important;
+  border-radius: 6px !important;
+  border: 1px solid color-mix(in srgb, var(--mk-border) 40%, transparent) !important;
+  font-size: 0.88em !important;
+}
+
+/* ── Code Blocks & Highlighting Containers ── */
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown) pre,
+[class*="_CodeBlock_"],
+[class*="_codeblock_"] {
+  background-color: var(--mk-code-block-bg) !important;
+  border-radius: 8px !important;
+}
+
+/* ── Blockquotes ── */
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) blockquote {
+  border-inline-start: 4px solid var(--mk-blockquote) !important;
+  border-inline-end: 0 !important;
+  background-color: var(--mk-blockquote-bg) !important;
+  padding-inline-start: 1rem !important;
+  padding-inline-end: 0.75rem !important;
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+  border-radius: 4px !important;
+}
+
+/* ── List Markers ── */
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) li::marker {
+  color: var(--mk-h3) !important;
+  font-weight: 700 !important;
+}
+
+/* ── Tables ── */
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) table {
+  border-collapse: collapse !important;
+  border: 1px solid var(--mk-border) !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) :is(th, td) {
+  border: 1px solid var(--mk-border) !important;
+  padding: 8px 14px !important;
+}
+
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) th {
+  background-color: var(--mk-inline-code-bg) !important;
+  color: var(--mk-bold) !important;
+  font-weight: 700 !important;
+}

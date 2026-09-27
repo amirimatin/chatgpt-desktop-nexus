@@ -1,0 +1,28 @@
+{
+  "name": "codex-desktop-nexus",
+  "version": "1.0.0",
+  "description": "Standalone Local Web Dashboard for Multi-Provider AI Model Management and Monokai Markdown Theme Engine for Codex Desktop & CLI",
+  "main": "index.js",
+  "bin": {
+    "codex-desktop-nexus": "./bin/cli.js"
+  },
+  "scripts": {
+    "dashboard": "node ./scripts/serve-dashboard.js",
+    "patch:desktop": "node ./scripts/patch-desktop-theme.js --apply",
+    "restore:desktop": "node ./scripts/patch-desktop-theme.js --restore",
+    "status:desktop": "node ./scripts/patch-desktop-theme.js --status",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "codex",
+    "codex-desktop",
+    "chatgpt-desktop",
+    "ai-providers",
+    "model-manager",
+    "dashboard",
+    "monokai",
+    "markdown-theme"
+  ],
+  "author": "Mahdi Amirimatin <m.amirimatin@gmail.com>",
+  "license": "MIT"
+}
