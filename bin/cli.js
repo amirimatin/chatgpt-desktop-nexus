@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
+const { fork } = require("child_process");
 const path = require("path");
 
 function printHelp() {
@@ -37,22 +38,23 @@ const command = args[0] || "dashboard";
 switch (command) {
   case "dashboard":
   case "serve": {
-    require("../scripts/serve-dashboard");
+    const child = fork(path.join(__dirname, "../scripts/serve-dashboard.js"), args.slice(1), { stdio: "inherit" });
+    child.on("exit", (code) => process.exit(code || 0));
     break;
   }
   case "patch": {
-    process.argv = [process.argv[0], path.join(__dirname, "../scripts/patch-desktop-theme.js"), "--apply", ...args.slice(1)];
-    require("../scripts/patch-desktop-theme");
+    const child = fork(path.join(__dirname, "../scripts/patch-desktop-theme.js"), ["--apply", ...args.slice(1)], { stdio: "inherit" });
+    child.on("exit", (code) => process.exit(code || 0));
     break;
   }
   case "restore": {
-    process.argv = [process.argv[0], path.join(__dirname, "../scripts/patch-desktop-theme.js"), "--restore", ...args.slice(1)];
-    require("../scripts/patch-desktop-theme");
+    const child = fork(path.join(__dirname, "../scripts/patch-desktop-theme.js"), ["--restore", ...args.slice(1)], { stdio: "inherit" });
+    child.on("exit", (code) => process.exit(code || 0));
     break;
   }
   case "status": {
-    process.argv = [process.argv[0], path.join(__dirname, "../scripts/patch-desktop-theme.js"), "--status", ...args.slice(1)];
-    require("../scripts/patch-desktop-theme");
+    const child = fork(path.join(__dirname, "../scripts/patch-desktop-theme.js"), ["--status", ...args.slice(1)], { stdio: "inherit" });
+    child.on("exit", (code) => process.exit(code || 0));
     break;
   }
   case "provider": {
