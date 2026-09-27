@@ -156,7 +156,11 @@
         <select id="cnProviderSelect"></select>
       </div>
       <div class="cn-field">
-        <label>Active Model</label>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <label>Active Model</label>
+          <span id="cnModelCount" style="font-size: 10px; color: #8c9199;"></span>
+        </div>
+        <input type="text" id="cnModelFilter" placeholder="🔍 Filter 800+ models..." style="margin-bottom: 5px; font-size: 11px;" />
         <select id="cnModelSelect"></select>
       </div>
       <div class="cn-btn-row">
@@ -216,26 +220,66 @@
     }
   }
 
-  async function loadProviderModels(providerId, currentModel) {
+  let currentLoadedModels = [];
+  let selectedModelValue = "";
+
+  function renderModelOptions(filterTerm = "") {
     const modelSelect = document.getElementById("cnModelSelect");
+    const countBadge = document.getElementById("cnModelCount");
+    const term = (filterTerm || "").trim().toLowerCase();
+
+    const filtered = term
+      ? currentLoadedModels.filter(m => m.toLowerCase().includes(term))
+      : currentLoadedModels;
+
+    if (countBadge) {
+      countBadge.textContent = currentLoadedModels.length > 0
+        ? `${currentLoadedModels.length} models`
+        : "";
+    }
+
     modelSelect.innerHTML = "";
-    let list = [currentModel].filter(Boolean);
+    if (selectedModelValue && !filtered.includes(selectedModelValue) && !term) {
+      filtered.unshift(selectedModelValue);
+    }
+
+    filtered.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      if (m === selectedModelValue) opt.selected = true;
+      modelSelect.appendChild(opt);
+    });
+
+    if (filtered.length === 0 && term) {
+      const opt = document.createElement("option");
+      opt.value = filterTerm.trim();
+      opt.textContent = `Custom: ${filterTerm.trim()}`;
+      opt.selected = true;
+      modelSelect.appendChild(opt);
+    }
+  }
+
+  async function loadProviderModels(providerId, currentModel) {
+    selectedModelValue = currentModel || selectedModelValue || "";
+    currentLoadedModels = [selectedModelValue].filter(Boolean);
+    renderModelOptions();
+
+    const filterInput = document.getElementById("cnModelFilter");
+    if (filterInput) filterInput.value = "";
+
     try {
       const res = await fetch(`${DASHBOARD_URL}/api/provider/models?id=${encodeURIComponent(providerId)}`);
       const data = await res.json();
       if (data.ok && data.models && data.models.length > 0) {
-        list = data.models;
-        if (!list.includes(currentModel) && currentModel) list.unshift(currentModel);
+        currentLoadedModels = data.models;
+        if (selectedModelValue && !currentLoadedModels.includes(selectedModelValue)) {
+          currentLoadedModels.unshift(selectedModelValue);
+        }
       }
     } catch {}
 
-    list.forEach(m => {
-      const opt = document.createElement("option");
-      opt.value = m;
-      opt.textContent = m;
-      if (m === currentModel) opt.selected = true;
-      modelSelect.appendChild(opt);
-    });
+    renderModelOptions();
   }
 
   function setupEvents() {
@@ -258,6 +302,13 @@
     provSelect.onchange = (e) => {
       loadProviderModels(e.target.value);
     };
+
+    const filterInput = document.getElementById("cnModelFilter");
+    if (filterInput) {
+      filterInput.oninput = (e) => {
+        renderModelOptions(e.target.value);
+      };
+    }
 
     btnApply.onclick = async () => {
       const providerId = provSelect.value;

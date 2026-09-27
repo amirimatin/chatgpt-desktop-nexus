@@ -7,6 +7,7 @@ const test = require("node:test");
 const {
   buildModelsUrl,
   deleteModelProvider,
+  fetchModelsForProvider,
   fetchProviderModelsFromConfig,
   normalizeCodexModelName,
   normalizeModelsResponse,
@@ -269,4 +270,39 @@ test("provider token falls back to auth.json and supports direct tokens", async 
     return { data: [{ id: "cx/gpt-5.6-sol" }] };
   });
   assert.deepEqual(models, ["cx/gpt-5.6-sol"]);
+});
+
+test("fetchModelsForProvider fetches from arbitrary provider and supports provider ID callers", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-config-"));
+  const file = path.join(dir, "config.toml");
+  fs.writeFileSync(file, [
+    "model_provider = \"active-prov\"",
+    "",
+    "[model_providers.active-prov]",
+    "base_url = \"https://active.example.com/v1\"",
+    "",
+    "[model_providers.omniroute]",
+    "name = \"OmniRoute\"",
+    "base_url = \"https://om.candocloud.ir/v1\"",
+    "env_key = \"OMNI_TOKEN\"",
+    "",
+  ].join("\n"));
+
+  // 1. fetchModelsForProvider directly by provider ID
+  const omniModels = await fetchModelsForProvider("omniroute", file, { OMNI_TOKEN: "secret-omni-key" }, async (url, token) => {
+    assert.equal(url, "https://om.candocloud.ir/v1/models");
+    assert.equal(token, "secret-omni-key");
+    return { data: [{ id: "antigravity/gemini-3.8-flash-high" }, { id: "claude-3-7-sonnet" }] };
+  });
+  assert.deepEqual(omniModels, ["antigravity/gemini-3.8-flash-high", "claude-3-7-sonnet"]);
+
+  // 2. fetchProviderModelsFromConfig called with providerId as first argument
+  const modelsViaProviderId = await fetchProviderModelsFromConfig("omniroute", file, { OMNI_TOKEN: "secret-omni-key" }, async (url, token) => {
+    assert.equal(url, "https://om.candocloud.ir/v1/models");
+    assert.equal(token, "secret-omni-key");
+    return { data: [{ id: "model-1" }] };
+  });
+  assert.deepEqual(modelsViaProviderId, ["model-1"]);
+
+  fs.rmSync(dir, { recursive: true, force: true });
 });

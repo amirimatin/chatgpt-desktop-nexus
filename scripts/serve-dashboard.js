@@ -8,6 +8,7 @@ const url = require("url");
 
 const {
   deleteModelProvider,
+  fetchModelsForProvider,
   fetchProviderModelsFromConfig,
   readCodexModelConfig,
   saveProviderToken,
@@ -409,9 +410,15 @@ function renderHtml() {
           <label data-i18n="providerLabel">پرووایدر هوش مصنوعی</label>
           <select id="activeProviderSelect"></select>
         </div>
-        <div class="field">
-          <label data-i18n="modelLabel">مدل فعال</label>
-          <select id="activeModelSelect"></select>
+        <div class="field" style="flex: 2;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <label data-i18n="modelLabel">مدل فعال</label>
+            <span id="modelsCountBadge" style="font-size: 0.75rem; color: var(--md-sys-color-primary); font-weight: 500;"></span>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <input type="text" id="modelFilterInput" placeholder="🔍 فیلتر و جستجوی بین ۸۰۰+ مدل..." style="flex: 1; min-width: 140px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 0.85rem;" />
+            <select id="activeModelSelect" style="flex: 2; min-width: 220px;"></select>
+          </div>
         </div>
         <button id="btnSaveActive" class="btn btn-primary" data-i18n="saveAndApply">ذخیره و فعال‌سازی</button>
       </div>
@@ -516,6 +523,8 @@ function renderHtml() {
         restoreThemeBtn: "بازگردانی استایل اولیه",
         previewTitle: "پیش‌نمایش زنده پالت مونوکای:",
         activeBadge: "فعال",
+        modelFilterPlaceholder: "🔍 فیلتر و جستجوی مدل...",
+        modelsCount: "مدل دریافت شد",
         editBtn: "ویرایش",
         deleteBtn: "حذف",
         setActiveBtn: "انتخاب فعال",
@@ -537,6 +546,8 @@ function renderHtml() {
         restoreThemeBtn: "Restore Default Styling",
         previewTitle: "Live Monokai Palette Preview:",
         activeBadge: "Active",
+        modelFilterPlaceholder: "🔍 Filter models...",
+        modelsCount: "models loaded",
         editBtn: "Edit",
         deleteBtn: "Delete",
         setActiveBtn: "Set Active",
@@ -556,6 +567,9 @@ function renderHtml() {
         const res = await fetch("/api/status");
         appState = await res.json();
         renderState();
+        if (appState && appState.config && appState.config.modelProvider && (!appState.models || appState.models.length === 0)) {
+          fetchModels(appState.config.modelProvider);
+        }
       } catch (err) {
         showToast("خطا در بارگذاری اطلاعات: " + err.message);
       }
@@ -576,24 +590,7 @@ function renderHtml() {
         provSelect.appendChild(opt);
       });
 
-      // Render Models Dropdown
-      const modelSelect = document.getElementById("activeModelSelect");
-      const currentModel = config.model;
-      const modelList = (appState.models && appState.models.length > 0)
-        ? appState.models
-        : [currentModel].filter(Boolean);
-
-      modelSelect.innerHTML = "";
-      if (!modelList.includes(currentModel) && currentModel) {
-        modelList.unshift(currentModel);
-      }
-      modelList.forEach(m => {
-        const opt = document.createElement("option");
-        opt.value = m;
-        opt.textContent = m;
-        if (m === currentModel) opt.selected = true;
-        modelSelect.appendChild(opt);
-      });
+      renderModelsDropdown();
 
       // Render Providers Grid
       const grid = document.getElementById("providersGrid");
@@ -657,15 +654,71 @@ function renderHtml() {
       }
     }
 
+    function renderModelsDropdown(searchTerm = "") {
+      const modelSelect = document.getElementById("activeModelSelect");
+      const countBadge = document.getElementById("modelsCountBadge");
+      const currentModel = (appState && appState.config && appState.config.model) || "";
+      const allModels = (appState && appState.models && appState.models.length > 0)
+        ? appState.models
+        : [currentModel].filter(Boolean);
+
+      const term = (searchTerm || "").trim().toLowerCase();
+      let filtered = term
+        ? allModels.filter(m => m.toLowerCase().includes(term))
+        : allModels;
+
+      if (countBadge) {
+        countBadge.textContent = allModels.length > 0
+          ? "(" + allModels.length + " " + (I18N[currentLang].modelsCount || "مدل") + ")"
+          : "";
+      }
+
+      modelSelect.innerHTML = "";
+      if (currentModel && !filtered.includes(currentModel) && !term) {
+        filtered = [currentModel, ...filtered];
+      }
+
+      filtered.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        if (m === currentModel) opt.selected = true;
+        modelSelect.appendChild(opt);
+      });
+
+      if (filtered.length === 0 && term) {
+        const opt = document.createElement("option");
+        opt.value = searchTerm.trim();
+        opt.textContent = "مدل دستی: " + searchTerm.trim();
+        opt.selected = true;
+        modelSelect.appendChild(opt);
+      }
+    }
+
     async function fetchModels(providerId) {
+      const btnRefresh = document.getElementById("btnRefreshModels");
+      if (btnRefresh) {
+        btnRefresh.textContent = currentLang === "fa" ? "⏳ در حال دریافت..." : "⏳ Fetching...";
+        btnRefresh.disabled = true;
+      }
       try {
         const res = await fetch("/api/provider/models?id=" + encodeURIComponent(providerId));
         const data = await res.json();
         if (data.ok) {
           appState.models = data.models || [];
-          renderState();
+          renderModelsDropdown(document.getElementById("modelFilterInput")?.value || "");
+          showToast(currentLang === "fa" ? ("✓ " + appState.models.length + " مدل از " + providerId + " دریافت شد") : ("✓ " + appState.models.length + " models loaded for " + providerId));
+        } else {
+          showToast("خطا در دریافت مدل‌ها: " + (data.error || "نامشخص"));
         }
-      } catch {}
+      } catch (err) {
+        showToast("خطا در ارتباط: " + err.message);
+      } finally {
+        if (btnRefresh) {
+          btnRefresh.innerHTML = "🔄 <span data-i18n=\"refreshModels\">" + I18N[currentLang].refreshModels + "</span>";
+          btnRefresh.disabled = false;
+        }
+      }
     }
 
     async function deleteProvider(providerId) {
@@ -767,6 +820,11 @@ function renderHtml() {
         showToast(err.message);
       }
     };
+
+    const filterInput = document.getElementById("modelFilterInput");
+    if (filterInput) {
+      filterInput.oninput = (e) => renderModelsDropdown(e.target.value);
+    }
 
     document.getElementById("btnRefreshModels").onclick = () => {
       const prov = document.getElementById("activeProviderSelect").value;
@@ -907,7 +965,7 @@ function createServer() {
         const providerId = query.id;
         if (!providerId) return sendError(res, 400, "Provider ID parameter is required");
         try {
-          const models = await fetchProviderModelsFromConfig(providerId);
+          const models = await fetchModelsForProvider(providerId);
           return sendJson(res, 200, { ok: true, providerId, models: models || [] });
         } catch (err) {
           return sendError(res, 500, `Could not load provider models: ${err.message}`);

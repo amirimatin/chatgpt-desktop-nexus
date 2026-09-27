@@ -50,6 +50,19 @@ test("dashboard server responds with HTML and handles status API", async () => {
     // 3. 404 for unknown route
     const notFoundRes = await request(port, { path: "/unknown-endpoint", method: "GET" });
     assert.equal(notFoundRes.status, 404);
+
+    // 4. GET /api/provider/models?id=openai
+    const modelsRes = await request(port, { path: "/api/provider/models?id=openai", method: "GET" });
+    assert.equal(modelsRes.status, 200);
+    assert.equal(modelsRes.json.ok, true);
+    assert.equal(modelsRes.json.providerId, "openai");
+    assert.ok(Array.isArray(modelsRes.json.models));
+    assert.ok(modelsRes.json.models.length > 0);
+
+    // 5. GET /api/provider/models without id returns 400
+    const errRes = await request(port, { path: "/api/provider/models", method: "GET" });
+    assert.equal(errRes.status, 400);
+
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
