@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-const { fork } = require("child_process");
+const { fork, spawnSync } = require("child_process");
 const path = require("path");
 
 function printHelp() {
@@ -12,10 +12,11 @@ Usage:
   codex-desktop-nexus <command> [options]
 
 Commands:
-  dashboard                 Start the local web dashboard (default)
-  patch                     Apply Monokai Markdown color theme to Codex Desktop
-  restore                   Restore original Codex Desktop styles
-  status                    Check Codex Desktop installation and theme status
+  dashboard                 Start the local web dashboard in foreground
+  service <install|remove>  Install or remove background systemd service for dashboard
+  patch                     Apply Monokai Markdown theme & In-App Model Switcher to Desktop
+  restore                   Restore original Codex Desktop files
+  status                    Check Codex Desktop installation and patch status
   provider list             List all configured model providers
   provider use <id> [model] Switch the active model provider
   help                      Show this help message
@@ -25,10 +26,9 @@ Options:
   --help, -h                Show help
 
 Examples:
-  codex-desktop-nexus dashboard --port 4321
   codex-desktop-nexus patch
-  codex-desktop-nexus status
-  codex-desktop-nexus provider use omniroute
+  codex-desktop-nexus service install
+  codex-desktop-nexus provider use omniroute antigravity/gemini-3.8-flash-high
 `);
 }
 
@@ -40,6 +40,12 @@ switch (command) {
   case "serve": {
     const child = fork(path.join(__dirname, "../scripts/serve-dashboard.js"), args.slice(1), { stdio: "inherit" });
     child.on("exit", (code) => process.exit(code || 0));
+    break;
+  }
+  case "service": {
+    const action = args[1] || "install";
+    const res = spawnSync("bash", [path.join(__dirname, "../scripts/install-systemd-service.sh"), action], { stdio: "inherit" });
+    process.exit(res.status || 0);
     break;
   }
   case "patch": {
