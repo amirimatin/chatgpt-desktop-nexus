@@ -19,6 +19,9 @@
     '[class*="composer"] [class*="utility"]',
     '[class*="composer"] [class*="branch"]',
     '[class*="composer"] [class*="worktree"]',
+    ".conversation-footer .composer-wrap",
+    ".conversation-footer",
+    ".composer-wrap",
   ];
 
   const style = document.createElement("style");
@@ -240,7 +243,12 @@
       container.style.display = "none";
       return false;
     }
-    if (container.parentElement !== header) header.appendChild(container);
+    if (container.parentElement !== header) {
+      const isComposerHost = header.matches(".conversation-footer, .composer-wrap")
+        || Boolean(header.closest(".conversation-footer"));
+      if (isComposerHost) header.prepend(container);
+      else header.appendChild(container);
+    }
     container.style.display = "block";
     return true;
   }
