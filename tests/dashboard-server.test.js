@@ -85,3 +85,80 @@ test("dashboard server responds with HTML and handles status API", async () => {
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("dashboard saves and activates provider-model profiles without storing credentials", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-dashboard-profiles-"));
+  const configPath = path.join(directory, "config.toml");
+  const profilesPath = path.join(directory, "nexus-model-profiles.json");
+  fs.writeFileSync(configPath, [
+    'model = "gpt-5.5"',
+    'model_provider = "router"',
+    "",
+    "[model_providers.router]",
+    'name = "Router"',
+    'base_url = "https://router.example.test/v1"',
+    "",
+    "[model_providers.local]",
+    'name = "Local"',
+    'base_url = "http://127.0.0.1:11434/v1"',
+    "",
+  ].join("\n"));
+
+  const server = createServer({ configPath, profilesPath });
+  await new Promise((resolve, reject) => {
+    server.listen(0, "127.0.0.1", resolve);
+    server.once("error", reject);
+  });
+  const port = server.address().port;
+
+  try {
+    const saved = await request(port, { path: "/api/profiles", method: "POST", headers: { "Content-Type": "application/json" } }, {
+      name: "Fast local",
+      providerId: "local",
+      model: "qwen2.5-coder:7b",
+    });
+    assert.equal(saved.status, 201);
+    assert.equal(saved.json.profile.name, "Fast local");
+
+    const listed = await request(port, { path: "/api/profiles", method: "GET" });
+    assert.deepEqual(listed.json.profiles, [saved.json.profile]);
+
+    const activated = await request(port, { path: "/api/profiles/activate", method: "POST", headers: { "Content-Type": "application/json" } }, {
+      profileId: saved.json.profile.id,
+    });
+    assert.equal(activated.status, 200);
+    assert.equal(activated.json.profile.model, "qwen2.5-coder:7b");
+    assert.match(fs.readFileSync(configPath, "utf8"), /model_provider = "local"/);
+    assert.match(fs.readFileSync(configPath, "utf8"), /model = "qwen2\.5-coder:7b"/);
+    assert.doesNotMatch(fs.readFileSync(profilesPath, "utf8"), /token|secret|api[_-]?key/i);
+
+    const status = await request(port, { path: "/api/status", method: "GET" });
+    assert.equal(status.json.config.modelProvider, "local");
+    assert.equal(status.json.config.model, "qwen2.5-coder:7b");
+
+    const untrustedList = await request(port, {
+      path: "/api/profiles",
+      method: "GET",
+      headers: { Origin: "https://untrusted.example" },
+    });
+    assert.equal(untrustedList.status, 403);
+
+    const untrustedActivation = await request(port, {
+      path: "/api/profiles/activate",
+      method: "POST",
+      headers: { Origin: "https://untrusted.example", "Content-Type": "application/json" },
+    }, { profileId: saved.json.profile.id });
+    assert.equal(untrustedActivation.status, 403);
+
+    const appOriginList = await request(port, {
+      path: "/api/profiles",
+      method: "GET",
+      headers: { Origin: "app://codex" },
+    });
+    assert.equal(appOriginList.status, 200);
+    assert.equal(appOriginList.headers["access-control-allow-origin"], "app://codex");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});

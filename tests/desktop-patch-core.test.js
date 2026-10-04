@@ -80,6 +80,20 @@ test("desktop theme stylesheet exists and contains Monokai markdown tokens and R
   assert.ok(css.includes("direction: ltr !important"), "Must enforce direction ltr for technical surfaces");
 });
 
+test("desktop model selector is an inline chat-header dropdown with named profile controls", () => {
+  const widget = fs.readFileSync(DEFAULT_WIDGET_JS_PATH, "utf8");
+  assert.ok(widget.includes("CHAT_HEADER_SELECTORS"), "Model control must locate the chat header before rendering");
+  assert.ok(widget.includes("COMPOSER_HEADER_SELECTORS"), "Model control must support the current Codex composer header");
+  assert.ok(widget.includes("findComposerHeader"), "Model control must fall back to the composer header when test IDs change");
+  assert.ok(widget.includes("textarea, [contenteditable=\"true\"]"), "Model control must find the active composer when no stable header selector exists");
+  assert.ok(widget.includes('class="cn-model-trigger"'), "Model control must expose a compact dropdown trigger");
+  assert.ok(widget.includes('class="cn-model-menu"'), "Model controls must be contained in the dropdown menu");
+  assert.ok(widget.includes('id="cnProfileSelect"'), "Dropdown must expose named provider-model profiles");
+  assert.ok(widget.includes("/api/profiles"), "Dropdown must load and save named profiles");
+  assert.ok(!widget.includes("position: fixed"), "Model control must not be attached to the viewport");
+  assert.ok(!widget.includes('class="cn-toolbar"'), "Large permanent toolbar markup must be removed");
+});
+
 test("patchHtmlContentSecurityPolicy preserves all original directives with HTML entities", () => {
   const htmlWithCsp = `<!doctype html><html><head>
     <meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; script-src &#39;self&#39; &#39;sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk=&#39; https://cdn.plaid.com; connect-src &#39;self&#39; https://ab.chatgpt.com wss://chatgpt.com;">
@@ -159,7 +173,7 @@ function setupMenu(p) {
   assert.equal(repatched, patched, "Must be idempotent");
 });
 
-test("mock asar can be read, patched with bottom-right widget, and safely restored", () => {
+test("mock asar can be read, patched with the chat-header dropdown, and safely restored", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-desktop-test-"));
   const mockAsarPath = path.join(tmpDir, "app.asar");
   const originalHtml = `<!doctype html><html><head>
@@ -181,7 +195,7 @@ test("mock asar can be read, patched with bottom-right widget, and safely restor
   assert.equal(initialStatus.patched, false);
   assert.equal(initialStatus.writable, true);
 
-  // Apply default patch: theme + bottom-right widget
+  // Apply default patch: theme + inline chat-header dropdown
   const applyResult = applyDesktopTheme(target);
   assert.equal(applyResult.changed, true);
   assert.ok(fs.existsSync(target.backupPath), "Backup must be created");

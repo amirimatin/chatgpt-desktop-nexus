@@ -18,6 +18,12 @@ const {
 } = require("../lib/codex-config-core");
 
 const {
+  activateModelProfile,
+  readModelProfiles,
+  saveModelProfile,
+} = require("../lib/nexus-profile-core");
+
+const {
   applyDesktopTheme,
   findCodexDesktopInstallation,
   inspectDesktopThemeStatus,
@@ -25,6 +31,12 @@ const {
 } = require("../lib/desktop-patch-core");
 
 const DEFAULT_PORT = 4321;
+
+function isTrustedLocalOrigin(origin) {
+  if (!origin) return true;
+  return /^app:\/\/(?:[a-z0-9._-]+)?$/i.test(origin)
+    || /^http:\/\/(?:127\.0\.0\.1|localhost):4321$/i.test(origin);
+}
 
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -895,16 +907,26 @@ function renderHtml() {
 </html>`;
 }
 
-function createServer() {
+function createServer({ configPath, profilesPath } = {}) {
   return http.createServer(async (req, res) => {
     const parsed = url.parse(req.url, true);
     const { pathname, query } = parsed;
+    const origin = req.headers.origin;
 
-    // CORS & Options
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Request-Private-Network");
-    res.setHeader("Access-Control-Allow-Private-Network", "true");
+    // The desktop webview is served from app://. Do not expose this loopback
+    // control plane to arbitrary websites, which could otherwise switch models.
+    if (!isTrustedLocalOrigin(origin)) {
+      return sendError(res, 403, "Cross-origin dashboard requests are not allowed.");
+    }
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      if (req.headers["access-control-request-private-network"] === "true" && /^app:\/\//i.test(origin)) {
+        res.setHeader("Access-Control-Allow-Private-Network", "true");
+      }
+    }
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
@@ -914,9 +936,27 @@ function createServer() {
     try {
       // ── API: Status ──
       if (pathname === "/api/status" && req.method === "GET") {
-        const config = readCodexModelConfig();
+        const config = readCodexModelConfig(configPath);
         const desktopTheme = getDesktopStatus();
         return sendJson(res, 200, { ok: true, config, desktopTheme });
+      }
+
+      // ── API: Named provider-model profiles ──
+      if (pathname === "/api/profiles" && req.method === "GET") {
+        return sendJson(res, 200, { ok: true, profiles: readModelProfiles(profilesPath) });
+      }
+
+      if (pathname === "/api/profiles" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const profile = saveModelProfile(body, profilesPath);
+        return sendJson(res, 201, { ok: true, profile });
+      }
+
+      if (pathname === "/api/profiles/activate" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        if (!body.profileId) return sendError(res, 400, "Profile ID is required");
+        const result = activateModelProfile(body.profileId, { profilesPath, configPath });
+        return sendJson(res, 200, { ok: true, ...result });
       }
 
       // ── API: Set Active Model ──
