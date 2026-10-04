@@ -10,13 +10,14 @@
   style.textContent = `
     #${WIDGET_ID} {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      top: 8px;
+      right: 18px;
       z-index: 2147483647;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Vazirmatn", sans-serif;
       user-select: none;
       direction: ltr;
-      pointer-events: none !important;
+      max-width: calc(100vw - 36px);
+      pointer-events: auto !important;
       -webkit-app-region: no-drag !important;
       app-region: no-drag !important;
       margin: 0;
@@ -29,46 +30,22 @@
       -webkit-app-region: no-drag !important;
       app-region: no-drag !important;
     }
-    .cn-pill {
-      display: inline-flex;
+    .cn-toolbar {
+      display: flex;
       align-items: center;
       -webkit-app-region: no-drag !important;
       app-region: no-drag !important;
-      gap: 7px;
-      padding: 7px 14px;
+      gap: 6px;
+      padding: 6px 8px;
       background: #1e2023;
-      border: 1.5px solid rgba(255, 255, 255, 0.18);
-      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 10px;
       color: #FCFCFA;
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
       line-height: 1;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
-      transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.42);
       pointer-events: auto !important;
-      user-select: none;
       white-space: nowrap;
-    }
-    .cn-pill:hover {
-      background: #282a2e;
-      border-color: #8ecdff;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(142, 205, 255, 0.35);
-    }
-    .cn-pill:active {
-      background: #32353a;
-    }
-    .cn-drag-handle {
-      opacity: 0.5;
-      font-size: 12px;
-      margin-right: 1px;
-      letter-spacing: -1px;
-      cursor: grab;
-      display: inline-block;
-      line-height: 1;
-    }
-    .cn-drag-handle:active {
-      cursor: grabbing;
     }
     .cn-dot {
       width: 8px;
@@ -84,61 +61,24 @@
       background: #FF5C57;
       box-shadow: 0 0 6px rgba(255, 92, 87, 0.7);
     }
-    .cn-pill-text {
-      display: inline-block;
-      line-height: 1.2;
-    }
-    .cn-arrow {
-      font-size: 9px;
-      opacity: 0.75;
-      margin-left: 1px;
-    }
-    .cn-popover {
-      display: none;
-      position: absolute;
-      -webkit-app-region: no-drag !important;
-      app-region: no-drag !important;
-      bottom: calc(100% + 8px);
-      right: 0;
-      width: 320px;
-      background: #1e2023;
-      border: 1px solid #43474e;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
-      color: #e2e2e5;
-      flex-direction: column;
-      gap: 12px;
-      pointer-events: auto !important;
-    }
-    .cn-popover.open { display: flex; }
-    .cn-popover-title {
-      font-size: 13px;
-      font-weight: 700;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: #8ecdff;
-      border-bottom: 1px solid #43474e;
-      padding-bottom: 8px;
-    }
     .cn-field {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
+      min-width: 104px;
     }
     .cn-field label {
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 600;
       color: #8c9199;
     }
     .cn-field select, .cn-field input {
       background: #121316;
       border: 1px solid #43474e;
-      border-radius: 6px;
-      padding: 6px 10px;
+      border-radius: 5px;
+      padding: 5px 7px;
       color: #FCFCFA;
-      font-size: 12px;
+      font-size: 11px;
       outline: none;
     }
     .cn-field select:focus, .cn-field input:focus {
@@ -147,13 +87,13 @@
     .cn-btn-row {
       display: flex;
       gap: 6px;
-      margin-top: 4px;
+      margin-top: 0;
     }
     .cn-btn {
       flex: 1;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 11.5px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      font-size: 10px;
       font-weight: 600;
       border: 1px solid transparent;
       cursor: pointer;
@@ -181,56 +121,40 @@
     }
     .cn-status-err { background: rgba(255, 100, 100, 0.15); color: #ffb4ab; }
     .cn-status-ok { background: rgba(100, 255, 100, 0.15); color: #81c784; }
+    .cn-status-msg { max-width: 150px; }
+    .cn-toolbar.offline { border-color: rgba(255, 92, 87, 0.55); }
+    @media (max-width: 900px) {
+      #${WIDGET_ID} { left: 12px; right: 12px; max-width: none; }
+      .cn-toolbar { flex-wrap: wrap; justify-content: flex-end; }
+      .cn-field { flex: 1 1 130px; }
+    }
   `;
   document.head.appendChild(style);
 
   const container = document.createElement("div");
   container.id = WIDGET_ID;
   container.innerHTML = `
-    <div class="cn-pill" id="cnPill" title="Drag to reposition • Click to switch model">
-      <span class="cn-drag-handle" title="Drag to reposition">⠿</span>
+    <div class="cn-toolbar" id="cnToolbar" aria-label="Codex Nexus model controls">
       <span class="cn-dot"></span>
-      <span class="cn-pill-text" id="cnPillLabel">Codex Model</span>
-      <span class="cn-arrow">▼</span>
-    </div>
-    <div class="cn-popover" id="cnPopover">
-      <div class="cn-popover-title">
-        <span>⚡ Quick Model Switcher</span>
-        <button id="cnBtnClose" style="background:none;border:none;color:#8c9199;cursor:pointer;font-size:14px;">✕</button>
-      </div>
       <div class="cn-status-msg" id="cnStatusMsg"></div>
-      
-      <div id="cnOfflineBanner" style="display: none; background: rgba(255, 92, 87, 0.15); border: 1px solid rgba(255, 92, 87, 0.3); border-radius: 8px; padding: 10px; font-size: 11px; line-height: 1.5; color: #ffb4ab;">
-        <div style="font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-          <span>⚠️</span> <span>داشبورد محلی غیرفعال است</span>
-        </div>
-        <div style="color: #e2e2e5; font-size: 10.5px;">برای اتصال و انتخاب مدل، سرویس پس‌زمینه را در ترمینال اجرا کنید:</div>
-        <code style="display: block; margin: 6px 0; padding: 5px 8px; background: rgba(0,0,0,0.4); border-radius: 4px; color: #8ecdff; font-family: monospace; font-size: 10.5px; user-select: all;">codex-desktop-nexus dashboard</code>
-        <div style="color: #8c9199; font-size: 10px; margin-bottom: 6px;">یا سرویس دائم: <code>codex-desktop-nexus service install</code></div>
-        <button class="cn-btn cn-btn-secondary" id="cnBtnRetry" style="width: 100%; font-size: 11px;">🔄 تلاش مجدد برای اتصال</button>
+      <div class="cn-field">
+        <label for="cnProfileSelect">Profile</label>
+        <select id="cnProfileSelect"><option value="">Profiles…</option></select>
       </div>
-
-      <div id="cnFormControls" style="display: flex; flex-direction: column; gap: 12px;">
-        <div class="cn-field">
-          <label>Active Provider</label>
-          <select id="cnProviderSelect"></select>
-        </div>
-        <div class="cn-field">
-          <div style="display: flex; justify-content: space-between; align-items: baseline;">
-            <label>Active Model</label>
-            <span id="cnModelCount" style="font-size: 10px; color: #8c9199;"></span>
-          </div>
-          <input type="text" id="cnModelFilter" placeholder="🔍 Filter 800+ models..." style="margin-bottom: 5px; font-size: 11px;" />
-          <select id="cnModelSelect"></select>
-        </div>
-        <div class="cn-btn-row">
-          <button class="cn-btn cn-btn-primary" id="cnBtnApply">Apply & Reload</button>
-          <button class="cn-btn cn-btn-secondary" id="cnBtnOpenDash" title="Open Full Web Dashboard">🌐 Dashboard</button>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #33363b; padding-top: 8px; margin-top: 2px;">
-          <span style="font-size: 10px; color: #8c9199;">📍 موقعیت دکمه</span>
-          <button id="cnBtnResetPos" style="background: none; border: none; color: #8ecdff; font-size: 10.5px; cursor: pointer; text-decoration: underline;">بازنشانی به گوشه پایین</button>
-        </div>
+      <div class="cn-field">
+        <label for="cnProviderSelect">Provider</label>
+        <select id="cnProviderSelect"></select>
+      </div>
+      <div class="cn-field" style="min-width: 170px;">
+        <label for="cnModelSelect">Model <span id="cnModelCount"></span></label>
+        <input type="text" id="cnModelFilter" placeholder="Filter models…" style="margin-bottom: 3px;" />
+        <select id="cnModelSelect"></select>
+      </div>
+      <div class="cn-btn-row">
+        <button class="cn-btn cn-btn-secondary" id="cnBtnSaveProfile" title="Save this provider-model pair as a profile">Save profile</button>
+        <button class="cn-btn cn-btn-primary" id="cnBtnApply">Apply & Reload</button>
+        <button class="cn-btn cn-btn-secondary" id="cnBtnOpenDash" title="Open Full Web Dashboard">Dashboard</button>
+        <button class="cn-btn cn-btn-secondary" id="cnBtnRetry" title="Retry local dashboard connection">Retry</button>
       </div>
     </div>
   `;
@@ -241,9 +165,8 @@
       return;
     }
     document.body.appendChild(container);
-    restorePosition();
     setupEvents();
-    refreshWidgetState();
+    refreshWidgetState(true);
     setupRtlEngine();
   }
 
@@ -476,59 +399,6 @@
 
   let widgetState = null;
 
-  function restorePosition() {
-    try {
-      const saved = localStorage.getItem("codex_nexus_widget_pos");
-      if (saved) {
-        const { left, top } = JSON.parse(saved);
-        if (typeof left === "number" && typeof top === "number") {
-          // If the position is within the top window drag header zone (top < 70), safely reposition it
-          if (top < 70) {
-            container.style.left = "auto";
-            container.style.top = "auto";
-            container.style.right = "24px";
-            container.style.bottom = "24px";
-            localStorage.removeItem("codex_nexus_widget_pos");
-            return;
-          }
-
-          const maxLeft = Math.max(10, window.innerWidth - 160);
-          const maxTop = Math.max(10, window.innerHeight - 50);
-          const clampedX = Math.min(Math.max(10, left), maxLeft);
-          const clampedY = Math.min(Math.max(70, top), maxTop);
-          container.style.left = `${clampedX}px`;
-          container.style.top = `${clampedY}px`;
-          container.style.right = "auto";
-          container.style.bottom = "auto";
-        }
-      }
-    } catch {}
-  }
-
-  function adjustPopoverPlacement() {
-    const popover = document.getElementById("cnPopover");
-    if (!popover) return;
-    const rect = container.getBoundingClientRect();
-
-    // Vertical alignment: open upwards if in lower half
-    if (rect.top > window.innerHeight / 2) {
-      popover.style.bottom = "calc(100% + 8px)";
-      popover.style.top = "auto";
-    } else {
-      popover.style.top = "calc(100% + 8px)";
-      popover.style.bottom = "auto";
-    }
-
-    // Horizontal alignment: align right if in right half
-    if (rect.left > window.innerWidth / 2) {
-      popover.style.right = "0px";
-      popover.style.left = "auto";
-    } else {
-      popover.style.left = "0px";
-      popover.style.right = "auto";
-    }
-  }
-
   function showMessage(text, isError) {
     const el = document.getElementById("cnStatusMsg");
     if (!el) return;
@@ -538,26 +408,23 @@
     setTimeout(() => { el.style.display = "none"; }, 3500);
   }
 
-  function setPillStatus(online, labelText = "") {
-    const pill = document.getElementById("cnPill");
-    if (!pill) return;
-    const dot = pill.querySelector(".cn-dot");
-    const label = document.getElementById("cnPillLabel");
+  function setToolbarStatus(online, labelText = "") {
+    const toolbar = document.getElementById("cnToolbar");
+    if (!toolbar) return;
+    const dot = toolbar.querySelector(".cn-dot");
     if (online) {
+      toolbar.classList.remove("offline");
       if (dot) dot.classList.remove("offline");
-      if (label && labelText) label.textContent = labelText;
     } else {
+      toolbar.classList.add("offline");
       if (dot) dot.classList.add("offline");
-      if (label) label.textContent = labelText || "Nexus (Dashboard Offline)";
+      showMessage(labelText || "Nexus dashboard is offline", true);
     }
   }
 
   const modelsCache = new Map();
 
-  async function refreshWidgetState(loadModelsIfOpen = false) {
-    const offlineBanner = document.getElementById("cnOfflineBanner");
-    const formControls = document.getElementById("cnFormControls");
-
+  async function refreshWidgetState(loadModels = false) {
     try {
       const res = await fetch(`${DASHBOARD_URL}/api/status`, { mode: "cors" });
       const data = await res.json();
@@ -565,34 +432,53 @@
       widgetState = data;
 
       const cfg = data.config;
-      const shortModel = (cfg.model || "default").split("/").pop();
-      setPillStatus(true, `${cfg.modelProvider || "openai"}: ${shortModel}`);
-
-      if (offlineBanner) offlineBanner.style.display = "none";
-      if (formControls) formControls.style.display = "flex";
-
-      const popover = document.getElementById("cnPopover");
-      const isPopoverOpen = popover && popover.classList.contains("open");
-
-      // Only populate and fetch models when popover is open or specifically requested
-      if (isPopoverOpen || loadModelsIfOpen) {
-        const provSelect = document.getElementById("cnProviderSelect");
-        if (provSelect) {
-          provSelect.innerHTML = "";
-          (cfg.providers || []).forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.textContent = p.name || p.id;
-            if (p.id === cfg.modelProvider) opt.selected = true;
-            provSelect.appendChild(opt);
-          });
+      setToolbarStatus(true);
+      const provSelect = document.getElementById("cnProviderSelect");
+      if (provSelect) {
+        const priorValue = provSelect.value;
+        provSelect.innerHTML = "";
+        (cfg.providers || []).forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.id;
+          opt.textContent = p.name || p.id;
+          if (p.id === cfg.modelProvider) opt.selected = true;
+          provSelect.appendChild(opt);
+        });
+        if (!provSelect.options.length) {
+          const opt = document.createElement("option");
+          opt.value = "openai";
+          opt.textContent = "OpenAI";
+          provSelect.appendChild(opt);
         }
-        await loadProviderModels(cfg.modelProvider, cfg.model);
+        if (priorValue && [...provSelect.options].some(opt => opt.value === priorValue)) {
+          provSelect.value = priorValue;
+        }
       }
+      await loadProfiles();
+      if (loadModels || !currentLoadedModels.length) await loadProviderModels(provSelect.value, cfg.model);
     } catch {
-      setPillStatus(false, "Nexus (Dashboard Offline)");
-      if (offlineBanner) offlineBanner.style.display = "block";
-      if (formControls) formControls.style.display = "none";
+      setToolbarStatus(false, "Nexus dashboard is offline");
+    }
+  }
+
+  async function loadProfiles() {
+    const select = document.getElementById("cnProfileSelect");
+    if (!select) return;
+    try {
+      const res = await fetch(`${DASHBOARD_URL}/api/profiles`, { mode: "cors" });
+      const data = await res.json();
+      if (!data.ok) throw new Error("Invalid profiles response");
+      const selected = select.value;
+      select.innerHTML = '<option value="">Profiles…</option>';
+      (data.profiles || []).forEach(profile => {
+        const option = document.createElement("option");
+        option.value = profile.id;
+        option.textContent = `${profile.name} — ${profile.providerId}: ${profile.model}`;
+        select.appendChild(option);
+      });
+      select.value = selected;
+    } catch {
+      select.innerHTML = '<option value="">Profiles unavailable</option>';
     }
   }
 
@@ -674,102 +560,15 @@
   }
 
   function setupEvents() {
-    const pill = document.getElementById("cnPill");
-    const popover = document.getElementById("cnPopover");
-    const btnClose = document.getElementById("cnBtnClose");
     const provSelect = document.getElementById("cnProviderSelect");
     const btnApply = document.getElementById("cnBtnApply");
     const btnOpenDash = document.getElementById("cnBtnOpenDash");
     const btnRetry = document.getElementById("cnBtnRetry");
-    const btnResetPos = document.getElementById("cnBtnResetPos");
-
-    let isDragging = false;
-    let startX = 0;
-    let startY = 0;
-    let initialLeft = 0;
-    let initialTop = 0;
-    let hasMoved = false;
-
-    pill.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0) return;
-      isDragging = true;
-      hasMoved = false;
-      startX = e.clientX;
-      startY = e.clientY;
-
-      const rect = container.getBoundingClientRect();
-      initialLeft = rect.left;
-      initialTop = rect.top;
-
-      const onPointerMove = (moveEvent) => {
-        if (!isDragging) return;
-        const dx = moveEvent.clientX - startX;
-        const dy = moveEvent.clientY - startY;
-
-        if (!hasMoved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
-          hasMoved = true;
-          if (popover) popover.classList.remove("open");
-          container.style.left = `${initialLeft}px`;
-          container.style.top = `${initialTop}px`;
-          container.style.right = "auto";
-          container.style.bottom = "auto";
-        }
-
-        if (hasMoved) {
-          const newLeft = Math.min(Math.max(10, initialLeft + dx), window.innerWidth - container.offsetWidth - 10);
-          const newTop = Math.min(Math.max(70, initialTop + dy), window.innerHeight - container.offsetHeight - 10);
-          container.style.left = `${newLeft}px`;
-          container.style.top = `${newTop}px`;
-        }
-      };
-
-      const onPointerUp = () => {
-        if (!isDragging) return;
-        isDragging = false;
-        document.removeEventListener("pointermove", onPointerMove);
-        document.removeEventListener("pointerup", onPointerUp);
-
-        if (hasMoved) {
-          const rect = container.getBoundingClientRect();
-          try {
-            localStorage.setItem("codex_nexus_widget_pos", JSON.stringify({ left: rect.left, top: rect.top }));
-          } catch {}
-          adjustPopoverPlacement();
-        } else {
-          // Normal click -> toggle popover
-          popover.classList.toggle("open");
-          if (popover.classList.contains("open")) {
-            adjustPopoverPlacement();
-            refreshWidgetState(true);
-          }
-        }
-      };
-
-      document.addEventListener("pointermove", onPointerMove);
-      document.addEventListener("pointerup", onPointerUp);
-    });
-
-    btnClose.onclick = () => { popover.classList.remove("open"); };
-
-    if (btnResetPos) {
-      btnResetPos.onclick = () => {
-        try { localStorage.removeItem("codex_nexus_widget_pos"); } catch {}
-        container.style.left = "auto";
-        container.style.top = "auto";
-        container.style.right = "24px";
-        container.style.bottom = "24px";
-        adjustPopoverPlacement();
-      };
-    }
+    const btnSaveProfile = document.getElementById("cnBtnSaveProfile");
+    const profileSelect = document.getElementById("cnProfileSelect");
 
     if (btnRetry) {
-      btnRetry.onclick = () => {
-        if (provSelect && provSelect.value) {
-          loadProviderModels(provSelect.value, null, true);
-        } else {
-          refreshWidgetState(true);
-        }
-      };
+      btnRetry.onclick = () => refreshWidgetState(true);
     }
 
     provSelect.onchange = (e) => {
@@ -816,12 +615,51 @@
       }
     };
 
+    btnSaveProfile.onclick = async () => {
+      const providerId = provSelect.value;
+      const model = document.getElementById("cnModelSelect").value;
+      const name = window.prompt("Profile name", `${providerId}: ${model}`);
+      if (!name || !providerId || !model) return;
+      try {
+        const res = await fetch(`${DASHBOARD_URL}/api/profiles`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, providerId, model })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Could not save profile");
+        await loadProfiles();
+        profileSelect.value = data.profile.id;
+        showMessage("Profile saved", false);
+      } catch (error) {
+        showMessage(error.message || "Could not save profile", true);
+      }
+    };
+
+    profileSelect.onchange = async (event) => {
+      const profileId = event.target.value;
+      if (!profileId) return;
+      try {
+        const res = await fetch(`${DASHBOARD_URL}/api/profiles/activate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileId })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Could not activate profile");
+        showMessage("Profile applied. Reloading app…", false);
+        setTimeout(() => window.location.reload(), 400);
+      } catch (error) {
+        showMessage(error.message || "Could not activate profile", true);
+      }
+    };
+
     btnOpenDash.onclick = () => {
       window.open(DASHBOARD_URL, "_blank");
     };
 
     window.addEventListener("focus", () => {
-      refreshWidgetState(false);
+      refreshWidgetState(true);
     });
 
     setInterval(() => {
