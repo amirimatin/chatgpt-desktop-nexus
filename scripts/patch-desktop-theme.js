@@ -19,7 +19,7 @@ Options:
   --apply, -a     Apply the Monokai markdown theme to Codex Desktop (default)
   --restore, -r   Restore original Codex Desktop files from backup
   --status, -s    Inspect installation and patch status
-  --floating-widget, -w  Also inject floating switcher pill in webview (default: native menu only)
+  --floating-widget, -w  Legacy alias; the inline chat-header model dropdown is included by default
   --force, -f     Force re-applying patch even if already detected as patched
   --help, -h      Show this help message
 `);
@@ -50,7 +50,7 @@ function main() {
   if (isStatus) {
     console.log(`- Patched: ${status.patched ? "✓ Yes" : "✗ No"}`);
     console.log(`  • Monokai Markdown Theme: ${status.themePatched ? "✓ Active" : "✗ Inactive"}`);
-    console.log(`  • Model Switcher Widget: ${status.widgetPatched ? "✓ Active (Bottom-Right, Draggable)" : "✗ Inactive"}`);
+    console.log(`  • Model Switcher Widget: ${status.widgetPatched ? "✓ Active (inline chat-header dropdown)" : "✗ Inactive"}`);
     if (status.nativeMenuPatched) {
       console.log(`  • Warning: Legacy native main script patch detected. Run with --force to restore clean main script.`);
     }
@@ -90,11 +90,11 @@ function main() {
   try {
     const result = applyDesktopTheme(target, undefined, undefined, { force: isForce });
     if (result.changed) {
-      console.log("✓ Monokai Markdown Theme & Bottom-Right Model Switcher applied to Codex Desktop!");
+      console.log("✓ Monokai Markdown Theme & inline chat-header Model Switcher applied to Codex Desktop!");
       if (result.restoredMainScript) {
         console.log("  • Restored clean, crash-free Electron main script.");
       }
-      console.log("  • Model Switcher positioned at bottom-right (draggable, leaves top-left menu completely free).");
+      console.log("  • Model Switcher appears as a compact dropdown beside the project and branch details.");
       console.log("Please restart Codex Desktop to activate changes.");
     } else {
       console.log("✓ Codex Desktop is already patched cleanly.");

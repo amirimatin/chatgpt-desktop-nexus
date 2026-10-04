@@ -80,13 +80,15 @@ test("desktop theme stylesheet exists and contains Monokai markdown tokens and R
   assert.ok(css.includes("direction: ltr !important"), "Must enforce direction ltr for technical surfaces");
 });
 
-test("desktop model selector is a fixed in-chat toolbar with named profile controls", () => {
+test("desktop model selector is an inline chat-header dropdown with named profile controls", () => {
   const widget = fs.readFileSync(DEFAULT_WIDGET_JS_PATH, "utf8");
-  assert.ok(widget.includes('class="cn-toolbar"'), "Model controls must render as a toolbar, not a popover");
-  assert.ok(widget.includes('id="cnProfileSelect"'), "Toolbar must expose named provider-model profiles");
-  assert.ok(widget.includes("/api/profiles"), "Toolbar must load and save named profiles");
-  assert.ok(widget.includes("top: 8px"), "Toolbar must stay fixed at the top of the chat view");
-  assert.ok(!widget.includes("cn-popover"), "Floating popover markup must be removed");
+  assert.ok(widget.includes("CHAT_HEADER_SELECTORS"), "Model control must locate the chat header before rendering");
+  assert.ok(widget.includes('class="cn-model-trigger"'), "Model control must expose a compact dropdown trigger");
+  assert.ok(widget.includes('class="cn-model-menu"'), "Model controls must be contained in the dropdown menu");
+  assert.ok(widget.includes('id="cnProfileSelect"'), "Dropdown must expose named provider-model profiles");
+  assert.ok(widget.includes("/api/profiles"), "Dropdown must load and save named profiles");
+  assert.ok(!widget.includes("position: fixed"), "Model control must not be attached to the viewport");
+  assert.ok(!widget.includes('class="cn-toolbar"'), "Large permanent toolbar markup must be removed");
 });
 
 test("patchHtmlContentSecurityPolicy preserves all original directives with HTML entities", () => {
@@ -168,7 +170,7 @@ function setupMenu(p) {
   assert.equal(repatched, patched, "Must be idempotent");
 });
 
-test("mock asar can be read, patched with the fixed top toolbar, and safely restored", () => {
+test("mock asar can be read, patched with the chat-header dropdown, and safely restored", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-desktop-test-"));
   const mockAsarPath = path.join(tmpDir, "app.asar");
   const originalHtml = `<!doctype html><html><head>
@@ -190,7 +192,7 @@ test("mock asar can be read, patched with the fixed top toolbar, and safely rest
   assert.equal(initialStatus.patched, false);
   assert.equal(initialStatus.writable, true);
 
-  // Apply default patch: theme + fixed top toolbar
+  // Apply default patch: theme + inline chat-header dropdown
   const applyResult = applyDesktopTheme(target);
   assert.equal(applyResult.changed, true);
   assert.ok(fs.existsSync(target.backupPath), "Backup must be created");

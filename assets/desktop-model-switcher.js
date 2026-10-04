@@ -4,19 +4,25 @@
 
   const DASHBOARD_URL = "http://127.0.0.1:4321";
   const WIDGET_ID = "codex-nexus-model-switcher-widget";
+  const CHAT_HEADER_SELECTORS = [
+    '[data-testid="conversation-header"]',
+    '[data-testid="thread-header"]',
+    '[data-testid="chat-header"]',
+    '[data-testid*="conversation-header"]',
+    '[data-testid*="thread-header"]',
+    '[data-testid*="chat-header"]',
+  ];
 
   const style = document.createElement("style");
   style.id = "codex-nexus-widget-styles";
   style.textContent = `
     #${WIDGET_ID} {
-      position: fixed;
-      top: 8px;
-      right: 18px;
-      z-index: 2147483647;
+      position: relative;
+      display: none;
+      z-index: 20;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Vazirmatn", sans-serif;
       user-select: none;
       direction: ltr;
-      max-width: calc(100vw - 36px);
       pointer-events: auto !important;
       -webkit-app-region: no-drag !important;
       app-region: no-drag !important;
@@ -30,23 +36,30 @@
       -webkit-app-region: no-drag !important;
       app-region: no-drag !important;
     }
-    .cn-toolbar {
-      display: flex;
+    .cn-model-trigger {
+      display: inline-flex;
       align-items: center;
       -webkit-app-region: no-drag !important;
       app-region: no-drag !important;
-      gap: 6px;
-      padding: 6px 8px;
-      background: #1e2023;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 10px;
+      gap: 5px;
+      padding: 5px 8px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 7px;
       color: #FCFCFA;
       font-size: 11px;
+      font-weight: 600;
       line-height: 1;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.42);
+      cursor: pointer;
       pointer-events: auto !important;
       white-space: nowrap;
     }
+    .cn-model-trigger:hover, .cn-model-trigger[aria-expanded="true"] {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(142, 205, 255, 0.65);
+    }
+    .cn-trigger-label { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+    .cn-trigger-chevron { opacity: 0.7; font-size: 9px; }
     .cn-dot {
       width: 8px;
       height: 8px;
@@ -61,11 +74,26 @@
       background: #FF5C57;
       box-shadow: 0 0 6px rgba(255, 92, 87, 0.7);
     }
+    .cn-model-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      width: min(320px, calc(100vw - 24px));
+      padding: 10px;
+      background: #1e2023;
+      border: 1px solid #43474e;
+      border-radius: 10px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.52);
+      flex-direction: column;
+      gap: 9px;
+    }
+    .cn-model-menu.open { display: flex; }
     .cn-field {
       display: flex;
       flex-direction: column;
       gap: 3px;
-      min-width: 104px;
+      min-width: 0;
     }
     .cn-field label {
       font-size: 9px;
@@ -121,12 +149,11 @@
     }
     .cn-status-err { background: rgba(255, 100, 100, 0.15); color: #ffb4ab; }
     .cn-status-ok { background: rgba(100, 255, 100, 0.15); color: #81c784; }
-    .cn-status-msg { max-width: 150px; }
-    .cn-toolbar.offline { border-color: rgba(255, 92, 87, 0.55); }
+    .cn-status-msg { max-width: 100%; }
+    .cn-model-trigger.offline { border-color: rgba(255, 92, 87, 0.55); }
     @media (max-width: 900px) {
-      #${WIDGET_ID} { left: 12px; right: 12px; max-width: none; }
-      .cn-toolbar { flex-wrap: wrap; justify-content: flex-end; }
-      .cn-field { flex: 1 1 130px; }
+      .cn-trigger-label { max-width: 110px; }
+      .cn-model-menu { right: auto; left: 0; }
     }
   `;
   document.head.appendChild(style);
@@ -134,8 +161,12 @@
   const container = document.createElement("div");
   container.id = WIDGET_ID;
   container.innerHTML = `
-    <div class="cn-toolbar" id="cnToolbar" aria-label="Codex Nexus model controls">
+    <button class="cn-model-trigger" id="cnDropdownToggle" type="button" aria-expanded="false" aria-controls="cnModelMenu">
       <span class="cn-dot"></span>
+      <span class="cn-trigger-label" id="cnTriggerLabel">Model</span>
+      <span class="cn-trigger-chevron">▼</span>
+    </button>
+    <div class="cn-model-menu" id="cnModelMenu">
       <div class="cn-status-msg" id="cnStatusMsg"></div>
       <div class="cn-field">
         <label for="cnProfileSelect">Profile</label>
@@ -159,15 +190,40 @@
     </div>
   `;
 
+  function findChatHeader() {
+    for (let index = 0; index < CHAT_HEADER_SELECTORS.length; index++) {
+      const header = document.querySelector(CHAT_HEADER_SELECTORS[index]);
+      if (header) return header;
+    }
+    const candidates = document.querySelectorAll("header, [role=toolbar], [data-testid]");
+    for (let index = 0; index < candidates.length; index++) {
+      const text = (candidates[index].textContent || "").toLowerCase();
+      if (text.includes("project") && text.includes("branch")) return candidates[index];
+    }
+    return null;
+  }
+
+  function attachToChatHeader() {
+    const header = findChatHeader();
+    if (!header) {
+      container.style.display = "none";
+      return false;
+    }
+    if (container.parentElement !== header) header.appendChild(container);
+    container.style.display = "block";
+    return true;
+  }
+
   function initWidget() {
     if (!document.body) {
       setTimeout(initWidget, 100);
       return;
     }
-    document.body.appendChild(container);
+    attachToChatHeader();
     setupEvents();
-    refreshWidgetState(true);
+    refreshWidgetState(false);
     setupRtlEngine();
+    setInterval(attachToChatHeader, 1500);
   }
 
   // ── Persian & Arabic Dynamic RTL Engine (High Performance) ──
@@ -409,14 +465,14 @@
   }
 
   function setToolbarStatus(online, labelText = "") {
-    const toolbar = document.getElementById("cnToolbar");
-    if (!toolbar) return;
-    const dot = toolbar.querySelector(".cn-dot");
+    const trigger = document.getElementById("cnDropdownToggle");
+    if (!trigger) return;
+    const dot = trigger.querySelector(".cn-dot");
     if (online) {
-      toolbar.classList.remove("offline");
+      trigger.classList.remove("offline");
       if (dot) dot.classList.remove("offline");
     } else {
-      toolbar.classList.add("offline");
+      trigger.classList.add("offline");
       if (dot) dot.classList.add("offline");
       showMessage(labelText || "Nexus dashboard is offline", true);
     }
@@ -433,6 +489,9 @@
 
       const cfg = data.config;
       setToolbarStatus(true);
+      const shortModel = (cfg.model || "default").split("/").pop();
+      const triggerLabel = document.getElementById("cnTriggerLabel");
+      if (triggerLabel) triggerLabel.textContent = `${cfg.modelProvider || "openai"}: ${shortModel}`;
       const provSelect = document.getElementById("cnProviderSelect");
       if (provSelect) {
         const priorValue = provSelect.value;
@@ -560,12 +619,38 @@
   }
 
   function setupEvents() {
+    const dropdownToggle = document.getElementById("cnDropdownToggle");
+    const modelMenu = document.getElementById("cnModelMenu");
     const provSelect = document.getElementById("cnProviderSelect");
     const btnApply = document.getElementById("cnBtnApply");
     const btnOpenDash = document.getElementById("cnBtnOpenDash");
     const btnRetry = document.getElementById("cnBtnRetry");
     const btnSaveProfile = document.getElementById("cnBtnSaveProfile");
     const profileSelect = document.getElementById("cnProfileSelect");
+
+    function setMenuOpen(isOpen, restoreFocus = false) {
+      if (!dropdownToggle || !modelMenu) return;
+      modelMenu.classList.toggle("open", isOpen);
+      dropdownToggle.setAttribute("aria-expanded", String(isOpen));
+      if (isOpen) refreshWidgetState(true);
+      if (restoreFocus) dropdownToggle.focus();
+    }
+
+    if (dropdownToggle && modelMenu) {
+      dropdownToggle.onclick = () => {
+        setMenuOpen(!modelMenu.classList.contains("open"));
+      };
+
+      document.addEventListener("click", (event) => {
+        if (!container.contains(event.target)) setMenuOpen(false);
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modelMenu.classList.contains("open")) {
+          setMenuOpen(false, true);
+        }
+      });
+    }
 
     if (btnRetry) {
       btnRetry.onclick = () => refreshWidgetState(true);
