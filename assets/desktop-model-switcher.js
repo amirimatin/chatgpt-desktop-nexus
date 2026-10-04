@@ -12,6 +12,14 @@
     '[data-testid*="thread-header"]',
     '[data-testid*="chat-header"]',
   ];
+  const COMPOSER_HEADER_SELECTORS = [
+    '[data-testid="composer-header"]',
+    '[data-testid="composer-utility-bar"]',
+    '[data-testid*="composer"][data-testid*="utility"]',
+    '[class*="composer"] [class*="utility"]',
+    '[class*="composer"] [class*="branch"]',
+    '[class*="composer"] [class*="worktree"]',
+  ];
 
   const style = document.createElement("style");
   style.id = "codex-nexus-widget-styles";
@@ -190,6 +198,29 @@
     </div>
   `;
 
+  function findComposerHeader() {
+    for (let index = 0; index < COMPOSER_HEADER_SELECTORS.length; index++) {
+      const header = document.querySelector(COMPOSER_HEADER_SELECTORS[index]);
+      if (header) return header;
+    }
+
+    // Codex Desktop's utility bar currently has no stable test id. Start from
+    // the active composer rather than falling back to a viewport-level widget.
+    const editors = document.querySelectorAll('textarea, [contenteditable="true"]');
+    for (let index = 0; index < editors.length; index++) {
+      const form = editors[index].closest("form");
+      if (!form) continue;
+      const toolbar = form.querySelector('[role="toolbar"]');
+      if (toolbar) return toolbar;
+      const button = form.querySelector("button");
+      if (button && button.parentElement && button.parentElement !== form) {
+        return button.parentElement;
+      }
+      return form;
+    }
+    return null;
+  }
+
   function findChatHeader() {
     for (let index = 0; index < CHAT_HEADER_SELECTORS.length; index++) {
       const header = document.querySelector(CHAT_HEADER_SELECTORS[index]);
@@ -200,7 +231,7 @@
       const text = (candidates[index].textContent || "").toLowerCase();
       if (text.includes("project") && text.includes("branch")) return candidates[index];
     }
-    return null;
+    return findComposerHeader();
   }
 
   function attachToChatHeader() {

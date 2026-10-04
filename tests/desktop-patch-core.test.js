@@ -83,6 +83,9 @@ test("desktop theme stylesheet exists and contains Monokai markdown tokens and R
 test("desktop model selector is an inline chat-header dropdown with named profile controls", () => {
   const widget = fs.readFileSync(DEFAULT_WIDGET_JS_PATH, "utf8");
   assert.ok(widget.includes("CHAT_HEADER_SELECTORS"), "Model control must locate the chat header before rendering");
+  assert.ok(widget.includes("COMPOSER_HEADER_SELECTORS"), "Model control must support the current Codex composer header");
+  assert.ok(widget.includes("findComposerHeader"), "Model control must fall back to the composer header when test IDs change");
+  assert.ok(widget.includes("textarea, [contenteditable=\"true\"]"), "Model control must find the active composer when no stable header selector exists");
   assert.ok(widget.includes('class="cn-model-trigger"'), "Model control must expose a compact dropdown trigger");
   assert.ok(widget.includes('class="cn-model-menu"'), "Model controls must be contained in the dropdown menu");
   assert.ok(widget.includes('id="cnProfileSelect"'), "Dropdown must expose named provider-model profiles");
