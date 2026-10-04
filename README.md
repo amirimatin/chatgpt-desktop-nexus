@@ -41,7 +41,7 @@ sudo npm run patch:desktop
 ```
 Restart Codex Desktop to activate the new colors.
 
-After patching, the model selector is a compact dropdown in the chat header, alongside the project and branch details. Choose a saved profile to apply its provider and model, or choose a provider/model pair and use **Save profile** to create a preset. Presets are stored locally in `~/.codex/nexus-model-profiles.json`; they never contain API keys or other provider credentials. If the current desktop version does not expose a compatible chat header, the selector remains hidden instead of floating elsewhere in the app.
+After patching, the model selector is a compact floating dropdown in the lower-right corner. Its closed state shows only the current model name. Choose a saved profile to apply its provider and model, or choose a provider/model pair and use **Save profile** to create a preset. Presets are stored locally in `~/.codex/nexus-model-profiles.json`; they never contain API keys or other provider credentials.
 
 ### 4. Restore Default Desktop Styling
 ```bash

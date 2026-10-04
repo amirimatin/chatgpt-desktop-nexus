@@ -19,7 +19,7 @@ Options:
   --apply, -a     Apply the Monokai markdown theme to Codex Desktop (default)
   --restore, -r   Restore original Codex Desktop files from backup
   --status, -s    Inspect installation and patch status
-  --floating-widget, -w  Legacy alias; the inline chat-header model dropdown is included by default
+  --floating-widget, -w  Legacy alias; the compact floating model dropdown is included by default
   --force, -f     Force re-applying patch even if already detected as patched
   --help, -h      Show this help message
 `);
@@ -30,7 +30,6 @@ function main() {
   const isRestore = args.includes("--restore") || args.includes("-r");
   const isStatus = args.includes("--status") || args.includes("-s");
   const isForce = args.includes("--force") || args.includes("-f");
-  const isFloatingWidget = args.includes("--floating-widget") || args.includes("-w");
   const isHelp = args.includes("--help") || args.includes("-h");
 
   if (isHelp) {
@@ -50,7 +49,7 @@ function main() {
   if (isStatus) {
     console.log(`- Patched: ${status.patched ? "✓ Yes" : "✗ No"}`);
     console.log(`  • Monokai Markdown Theme: ${status.themePatched ? "✓ Active" : "✗ Inactive"}`);
-    console.log(`  • Model Switcher Widget: ${status.widgetPatched ? "✓ Active (inline chat-header dropdown)" : "✗ Inactive"}`);
+    console.log(`  • Model Switcher Widget: ${status.widgetPatched ? "✓ Active (compact floating dropdown)" : "✗ Inactive"}`);
     if (status.nativeMenuPatched) {
       console.log(`  • Warning: Legacy native main script patch detected. Run with --force to restore clean main script.`);
     }
@@ -90,11 +89,11 @@ function main() {
   try {
     const result = applyDesktopTheme(target, undefined, undefined, { force: isForce });
     if (result.changed) {
-      console.log("✓ Monokai Markdown Theme & inline chat-header Model Switcher applied to Codex Desktop!");
+      console.log("✓ Monokai Markdown Theme & compact floating Model Switcher applied to Codex Desktop!");
       if (result.restoredMainScript) {
         console.log("  • Restored clean, crash-free Electron main script.");
       }
-      console.log("  • Model Switcher appears as a compact dropdown beside the project and branch details.");
+      console.log("  • Model Switcher appears as a compact model-name dropdown in the lower-right corner.");
       console.log("Please restart Codex Desktop to activate changes.");
     } else {
       console.log("✓ Codex Desktop is already patched cleanly.");

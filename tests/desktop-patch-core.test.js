@@ -80,19 +80,19 @@ test("desktop theme stylesheet exists and contains Monokai markdown tokens and R
   assert.ok(css.includes("direction: ltr !important"), "Must enforce direction ltr for technical surfaces");
 });
 
-test("desktop model selector is an inline chat-header dropdown with named profile controls", () => {
+test("desktop model selector is a compact floating dropdown with named profile controls", () => {
   const widget = fs.readFileSync(DEFAULT_WIDGET_JS_PATH, "utf8");
-  assert.ok(widget.includes("CHAT_HEADER_SELECTORS"), "Model control must locate the chat header before rendering");
-  assert.ok(widget.includes("COMPOSER_HEADER_SELECTORS"), "Model control must support the current Codex composer header");
-  assert.ok(widget.includes("findComposerHeader"), "Model control must fall back to the composer header when test IDs change");
-  assert.ok(widget.includes('".conversation-footer .composer-wrap"'), "Model control must support Codex's current conversation footer");
-  assert.ok(widget.includes('".conversation-footer"'), "Model control must remain inside the active chat composer");
-  assert.ok(widget.includes("textarea, [contenteditable=\"true\"]"), "Model control must find the active composer when no stable header selector exists");
   assert.ok(widget.includes('class="cn-model-trigger"'), "Model control must expose a compact dropdown trigger");
   assert.ok(widget.includes('class="cn-model-menu"'), "Model controls must be contained in the dropdown menu");
   assert.ok(widget.includes('id="cnProfileSelect"'), "Dropdown must expose named provider-model profiles");
   assert.ok(widget.includes("/api/profiles"), "Dropdown must load and save named profiles");
-  assert.ok(!widget.includes("position: fixed"), "Model control must not be attached to the viewport");
+  assert.ok(widget.includes("position: fixed"), "Model control must remain visible independently of the shell DOM");
+  assert.ok(widget.includes("bottom: 24px"), "Compact trigger must sit above the bottom edge");
+  assert.ok(widget.includes("right: 24px"), "Compact trigger must sit at the lower-right edge");
+  assert.ok(widget.includes("document.body.appendChild(container)"), "Model control must attach directly to the document body");
+  assert.ok(!widget.includes('class="cn-dot"'), "Closed trigger must show only the model name, without a status dot");
+  assert.ok(!widget.includes('class="cn-trigger-chevron"'), "Closed trigger must not reserve space for a chevron");
+  assert.ok(!widget.includes("attachToChatHeader"), "Model control must not depend on inaccessible chat-header DOM");
   assert.ok(!widget.includes('class="cn-toolbar"'), "Large permanent toolbar markup must be removed");
 });
 
@@ -175,7 +175,7 @@ function setupMenu(p) {
   assert.equal(repatched, patched, "Must be idempotent");
 });
 
-test("mock asar can be read, patched with the chat-header dropdown, and safely restored", () => {
+test("mock asar can be read, patched with the compact floating dropdown, and safely restored", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-desktop-test-"));
   const mockAsarPath = path.join(tmpDir, "app.asar");
   const originalHtml = `<!doctype html><html><head>
@@ -197,7 +197,7 @@ test("mock asar can be read, patched with the chat-header dropdown, and safely r
   assert.equal(initialStatus.patched, false);
   assert.equal(initialStatus.writable, true);
 
-  // Apply default patch: theme + inline chat-header dropdown
+  // Apply default patch: theme + compact floating dropdown
   const applyResult = applyDesktopTheme(target);
   assert.equal(applyResult.changed, true);
   assert.ok(fs.existsSync(target.backupPath), "Backup must be created");

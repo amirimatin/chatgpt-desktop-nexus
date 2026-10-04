@@ -3,36 +3,16 @@
   window.__codexNexusModelSwitcherLoaded = true;
 
   const DASHBOARD_URL = "http://127.0.0.1:4321";
-  const WIDGET_DIAGNOSTICS_URL = `${DASHBOARD_URL}/api/widget-diagnostics`;
   const WIDGET_ID = "codex-nexus-model-switcher-widget";
-  let lastDiagnosticSignature = "";
-  const CHAT_HEADER_SELECTORS = [
-    '[data-testid="conversation-header"]',
-    '[data-testid="thread-header"]',
-    '[data-testid="chat-header"]',
-    '[data-testid*="conversation-header"]',
-    '[data-testid*="thread-header"]',
-    '[data-testid*="chat-header"]',
-  ];
-  const COMPOSER_HEADER_SELECTORS = [
-    '[data-testid="composer-header"]',
-    '[data-testid="composer-utility-bar"]',
-    '[data-testid*="composer"][data-testid*="utility"]',
-    '[class*="composer"] [class*="utility"]',
-    '[class*="composer"] [class*="branch"]',
-    '[class*="composer"] [class*="worktree"]',
-    ".conversation-footer .composer-wrap",
-    ".conversation-footer",
-    ".composer-wrap",
-  ];
 
   const style = document.createElement("style");
   style.id = "codex-nexus-widget-styles";
   style.textContent = `
     #${WIDGET_ID} {
-      position: relative;
-      display: none;
-      z-index: 20;
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 2147483647;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Vazirmatn", sans-serif;
       user-select: none;
       direction: ltr;
@@ -54,11 +34,10 @@
       align-items: center;
       -webkit-app-region: no-drag !important;
       app-region: no-drag !important;
-      gap: 5px;
-      padding: 5px 8px;
-      background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 7px;
+      padding: 6px 10px;
+      background: #1e2023;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 9999px;
       color: #FCFCFA;
       font-size: 11px;
       font-weight: 600;
@@ -72,25 +51,11 @@
       border-color: rgba(142, 205, 255, 0.65);
     }
     .cn-trigger-label { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-    .cn-trigger-chevron { opacity: 0.7; font-size: 9px; }
-    .cn-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #A9DC76;
-      box-shadow: 0 0 6px #A9DC76;
-      display: inline-block;
-      flex-shrink: 0;
-      transition: background 0.3s ease, box-shadow 0.3s ease;
-    }
-    .cn-dot.offline {
-      background: #FF5C57;
-      box-shadow: 0 0 6px rgba(255, 92, 87, 0.7);
-    }
     .cn-model-menu {
       display: none;
       position: absolute;
-      top: calc(100% + 6px);
+      bottom: calc(100% + 8px);
+      top: auto;
       right: 0;
       width: min(320px, calc(100vw - 24px));
       padding: 10px;
@@ -165,8 +130,9 @@
     .cn-status-msg { max-width: 100%; }
     .cn-model-trigger.offline { border-color: rgba(255, 92, 87, 0.55); }
     @media (max-width: 900px) {
+      #${WIDGET_ID} { right: 12px; bottom: 12px; }
       .cn-trigger-label { max-width: 110px; }
-      .cn-model-menu { right: auto; left: 0; }
+      .cn-model-menu { right: 0; left: auto; }
     }
   `;
   document.head.appendChild(style);
@@ -175,9 +141,7 @@
   container.id = WIDGET_ID;
   container.innerHTML = `
     <button class="cn-model-trigger" id="cnDropdownToggle" type="button" aria-expanded="false" aria-controls="cnModelMenu">
-      <span class="cn-dot"></span>
       <span class="cn-trigger-label" id="cnTriggerLabel">Model</span>
-      <span class="cn-trigger-chevron">▼</span>
     </button>
     <div class="cn-model-menu" id="cnModelMenu">
       <div class="cn-status-msg" id="cnStatusMsg"></div>
@@ -203,100 +167,15 @@
     </div>
   `;
 
-  function getMountTargetName(header) {
-    if (!header) return "none";
-    if (header.matches(".conversation-footer, .composer-wrap") || header.closest(".conversation-footer")) {
-      return "conversation-footer";
-    }
-    if (header.matches(COMPOSER_HEADER_SELECTORS.join(","))) return "composer-header";
-    if (header.matches(CHAT_HEADER_SELECTORS.join(","))) return "chat-header";
-    return "other";
-  }
-
-  function reportWidgetDiagnostic(header) {
-    const attached = Boolean(header && container.parentElement === header);
-    const snapshot = {
-      stage: attached ? "attached" : "unattached",
-      scriptLoaded: true,
-      attached,
-      target: getMountTargetName(header),
-      editorCount: document.querySelectorAll('textarea, [contenteditable="true"]').length,
-      shadowRootCount: Array.from(document.querySelectorAll("*")).filter((element) => element.shadowRoot).length,
-    };
-    const signature = JSON.stringify(snapshot);
-    if (signature === lastDiagnosticSignature) return;
-    lastDiagnosticSignature = signature;
-    fetch(WIDGET_DIAGNOSTICS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: signature,
-    }).catch(() => {});
-  }
-
-  function findComposerHeader() {
-    for (let index = 0; index < COMPOSER_HEADER_SELECTORS.length; index++) {
-      const header = document.querySelector(COMPOSER_HEADER_SELECTORS[index]);
-      if (header) return header;
-    }
-
-    // Codex Desktop's utility bar currently has no stable test id. Start from
-    // the active composer rather than falling back to a viewport-level widget.
-    const editors = document.querySelectorAll('textarea, [contenteditable="true"]');
-    for (let index = 0; index < editors.length; index++) {
-      const form = editors[index].closest("form");
-      if (!form) continue;
-      const toolbar = form.querySelector('[role="toolbar"]');
-      if (toolbar) return toolbar;
-      const button = form.querySelector("button");
-      if (button && button.parentElement && button.parentElement !== form) {
-        return button.parentElement;
-      }
-      return form;
-    }
-    return null;
-  }
-
-  function findChatHeader() {
-    for (let index = 0; index < CHAT_HEADER_SELECTORS.length; index++) {
-      const header = document.querySelector(CHAT_HEADER_SELECTORS[index]);
-      if (header) return header;
-    }
-    const candidates = document.querySelectorAll("header, [role=toolbar], [data-testid]");
-    for (let index = 0; index < candidates.length; index++) {
-      const text = (candidates[index].textContent || "").toLowerCase();
-      if (text.includes("project") && text.includes("branch")) return candidates[index];
-    }
-    return findComposerHeader();
-  }
-
-  function attachToChatHeader() {
-    const header = findChatHeader();
-    if (!header) {
-      container.style.display = "none";
-      reportWidgetDiagnostic(null);
-      return false;
-    }
-    if (container.parentElement !== header) {
-      const isComposerHost = header.matches(".conversation-footer, .composer-wrap")
-        || Boolean(header.closest(".conversation-footer"));
-      if (isComposerHost) header.prepend(container);
-      else header.appendChild(container);
-    }
-    container.style.display = "block";
-    reportWidgetDiagnostic(header);
-    return true;
-  }
-
   function initWidget() {
     if (!document.body) {
       setTimeout(initWidget, 100);
       return;
     }
-    attachToChatHeader();
+    document.body.appendChild(container);
     setupEvents();
     refreshWidgetState(false);
     setupRtlEngine();
-    setInterval(attachToChatHeader, 1500);
   }
 
   // ── Persian & Arabic Dynamic RTL Engine (High Performance) ──
@@ -540,13 +419,10 @@
   function setToolbarStatus(online, labelText = "") {
     const trigger = document.getElementById("cnDropdownToggle");
     if (!trigger) return;
-    const dot = trigger.querySelector(".cn-dot");
     if (online) {
       trigger.classList.remove("offline");
-      if (dot) dot.classList.remove("offline");
     } else {
       trigger.classList.add("offline");
-      if (dot) dot.classList.add("offline");
       showMessage(labelText || "Nexus dashboard is offline", true);
     }
   }
@@ -564,7 +440,9 @@
       setToolbarStatus(true);
       const shortModel = (cfg.model || "default").split("/").pop();
       const triggerLabel = document.getElementById("cnTriggerLabel");
-      if (triggerLabel) triggerLabel.textContent = `${cfg.modelProvider || "openai"}: ${shortModel}`;
+      if (triggerLabel) triggerLabel.textContent = shortModel;
+      const trigger = document.getElementById("cnDropdownToggle");
+      if (trigger) trigger.title = `${cfg.modelProvider || "openai"}: ${cfg.model || "default"}`;
       const provSelect = document.getElementById("cnProviderSelect");
       if (provSelect) {
         const priorValue = provSelect.value;
