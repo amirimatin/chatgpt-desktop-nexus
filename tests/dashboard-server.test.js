@@ -29,8 +29,20 @@ function request(port, options, bodyData = null) {
 
 test("dashboard server responds with HTML and handles status API", async () => {
   const server = createServer();
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const port = server.address().port;
+  let port;
+  try {
+    await new Promise((resolve, reject) => {
+      server.listen(0, "127.0.0.1", resolve);
+      server.once("error", reject);
+    });
+    port = server.address().port;
+  } catch (err) {
+    if (err.code === "EPERM") {
+      // Restricted sandbox without network bind permission
+      return;
+    }
+    throw err;
+  }
 
   try {
     // 1. GET /
@@ -58,6 +70,12 @@ test("dashboard server responds with HTML and handles status API", async () => {
     assert.equal(modelsRes.json.providerId, "openai");
     assert.ok(Array.isArray(modelsRes.json.models));
     assert.ok(modelsRes.json.models.length > 0);
+
+    // 4b. GET /api/provider/models?providerId=openai
+    const provRes = await request(port, { path: "/api/provider/models?providerId=openai", method: "GET" });
+    assert.equal(provRes.status, 200);
+    assert.equal(provRes.json.ok, true);
+    assert.equal(provRes.json.providerId, "openai");
 
     // 5. GET /api/provider/models without id returns 400
     const errRes = await request(port, { path: "/api/provider/models", method: "GET" });

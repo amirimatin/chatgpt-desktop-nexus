@@ -903,7 +903,8 @@ function createServer() {
     // CORS & Options
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Request-Private-Network");
+    res.setHeader("Access-Control-Allow-Private-Network", "true");
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
@@ -962,7 +963,7 @@ function createServer() {
 
       // ── API: Fetch Provider Models ──
       if (pathname === "/api/provider/models" && req.method === "GET") {
-        const providerId = query.id;
+        const providerId = query.id || query.providerId;
         if (!providerId) return sendError(res, 400, "Provider ID parameter is required");
         try {
           const models = await fetchModelsForProvider(providerId);

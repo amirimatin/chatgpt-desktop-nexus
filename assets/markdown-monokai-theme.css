@@ -209,3 +209,169 @@ body.vscode-high-contrast,
   color: var(--mk-bold) !important;
   font-weight: 700 !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Codex Nexus — Persian & Arabic RTL Engine
+   Automatic bidirectional flow for conversation, headings, lists & tables.
+   Strict LTR guard for code blocks, terminals, diffs & editors.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Prose RTL Direction & Typography ── */
+[data-vazirmatn-flow="rtl"],
+[data-vazirmatn-flow="rtl"] :is(p, h1, h2, h3, h4, h5, h6, blockquote, table, thead, tbody, tr, td, th),
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) [data-vazirmatn-flow="rtl"],
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) [dir="rtl"] {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate !important;
+  font-family: Vazirmatn, Vazir, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.8 !important;
+}
+
+/* ── List Direction (RTL) ── */
+[data-vazirmatn-flow="rtl"] :is(ul, ol),
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) [dir="rtl"] :is(ul, ol) {
+  direction: rtl !important;
+  text-align: right !important;
+  padding-left: 0 !important;
+  padding-right: 1.5rem !important;
+  margin-left: 8px !important;
+  margin-right: 0 !important;
+  list-style-position: outside !important;
+}
+
+[data-vazirmatn-flow="rtl"] li,
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) [dir="rtl"] li {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate !important;
+}
+
+/* ── Table Direction (RTL) ── */
+[data-vazirmatn-flow="rtl"] table,
+[dir="rtl"] table,
+[data-markdown-table][dir="rtl"] table {
+  direction: rtl !important;
+  text-align: right !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+[data-vazirmatn-flow="rtl"] :is(th, td),
+[dir="rtl"] :is(th, td),
+[data-markdown-table][dir="rtl"] :is(th, td) {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate !important;
+}
+
+/* ── Explicit LTR Flow ── */
+[data-vazirmatn-flow="ltr"],
+[data-vazirmatn-flow="ltr"] :is(p, h1, h2, h3, h4, h5, h6, blockquote, table, thead, tbody, tr, td, th),
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) [data-vazirmatn-flow="ltr"],
+:is([data-thread-find-target="conversation"], .vscode-markdown, .inline-markdown, .rendered-markdown, [class*="_markdownContent_"]) [dir="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STRICT LTR PROTECTION — CODE BLOCKS, TERMINAL, DIFFS & EDITORS
+   Never allow RTL to touch code, line numbers, or technical blocks!
+   ═══════════════════════════════════════════════════════════════════════════ */
+pre, pre *, code, code *, kbd, samp, tt,
+.hljs, .hljs *, .token,
+.cm-editor, .cm-editor *, .monaco-editor, .monaco-editor *, .xterm, .xterm *,
+diffs-container, diffs-container *,
+[data-diff], [data-diff] *,
+[data-file][data-diff-type], [data-file][data-diff-type] *,
+[data-code], [data-code] *,
+[data-line-index], [data-line-index] *,
+[data-codex-terminal], [data-codex-terminal] *,
+[data-markdown-copy="code-block"], [data-markdown-copy="inline-code"],
+[class*="code-snippet"], [class*="code-snippet"] *,
+[class*="code-editor"], [class*="code-editor"] *,
+[class*="_codeBlock_"], [class*="_codeBlock_"] *,
+[class*="_CodeBlock_"], [class*="_CodeBlock_"] *,
+[class*="_codeblock_"], [class*="_codeblock_"] *,
+[class*="code-block"], [class*="code-block"] *,
+[class*="codeBlock"], [class*="codeBlock"] *,
+[class*="language-"], [class*="language-"] *,
+[class*="diff_"], [class*="diff_"] *,
+[class*="diff-view"], [class*="diff-view"] *,
+[class*="patch-view"], [class*="patch-view"] * {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+  font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+/* ── Composer Input RTL / LTR ── */
+[data-vazirmatn-dir="rtl"] {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: plaintext !important;
+}
+
+[data-vazirmatn-dir="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: plaintext !important;
+}
+
+/* ── Streaming Token Isolation (prevents jumbled words during token streaming) ── */
+:is([data-vazirmatn-flow="rtl"], [dir="rtl"]) :is([class*="_markdownRoot_"] [class*="_fadeIn_"], [data-selected-text-overlay-target] [class*="_fadeIn_"], [class*="_fadeIn_"]) {
+  direction: inherit !important;
+  text-align: inherit !important;
+  unicode-bidi: normal !important;
+}
+
+/* ── Exploration & Reasoning Accordion ── */
+[data-testid="exploration-accordion-body"],
+[data-thread-find-target="thought"] {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: plaintext !important;
+}
+
+/* ── Inline Code in RTL (strict LTR isolation within Persian prose) ── */
+:is([data-vazirmatn-flow="rtl"], [dir="rtl"]) code:not(pre code) {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+  display: inline-block !important;
+  vertical-align: baseline !important;
+}
+
+/* ── High-Specificity LTR Guard (outranks any prose inheritance) ── */
+#root#root :is(
+  pre, pre *, code, code *, kbd, samp, tt,
+  .hljs, .hljs *, .token, .monaco-editor, .monaco-editor *,
+  .cm-editor, .cm-editor *, .xterm, .xterm *,
+  diffs-container, diffs-container *,
+  [data-markdown-copy="code-block"], [data-markdown-copy="code-block"] *,
+  [data-markdown-copy="inline-code"], [data-markdown-copy="inline-code"] *,
+  [data-diff], [data-diff] *, [data-file][data-diff-type], [data-file][data-diff-type] *,
+  [data-code], [data-code] *, [data-line-index], [data-line-index] *,
+  [data-codex-terminal], [data-codex-terminal] *,
+  [data-thread-find-target="review"], [data-thread-find-target="review"] *,
+  [data-review-path], [data-review-path] *, [data-diffs-header], [data-diffs-header] *,
+  [data-line-type], [data-line-type] *, [data-line-number-content], [data-line-number-content] *,
+  [class*="_codeBlock_"], [class*="_codeBlock_"] *,
+  [class*="_CodeBlock_"], [class*="_CodeBlock_"] *,
+  [class*="_codeblock_"], [class*="_codeblock_"] *,
+  [class*="_codeBlockPlaceholder_"], [class*="_codeBlockPlaceholder_"] *,
+  [class*="code-block"], [class*="code-block"] *,
+  [class*="codeBlock"], [class*="codeBlock"] *,
+  [class*="code-snippet"], [class*="code-snippet"] *,
+  [class*="code-editor"], [class*="code-editor"] *,
+  [class*="diff_"], [class*="diff_"] *,
+  [class*="diff-view"], [class*="diff-view"] *,
+  [class*="patch-view"], [class*="patch-view"] *,
+  [class*="diffs-"], [class*="diffs-"] *
+) {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+  font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
