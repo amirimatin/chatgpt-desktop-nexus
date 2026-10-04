@@ -86,6 +86,46 @@ test("dashboard server responds with HTML and handles status API", async () => {
   }
 });
 
+test("dashboard stores a sanitized local model-widget diagnostic", async () => {
+  const server = createServer();
+  await new Promise((resolve, reject) => {
+    server.listen(0, "127.0.0.1", resolve);
+    server.once("error", reject);
+  });
+  const port = server.address().port;
+
+  try {
+    const report = await request(port, {
+      path: "/api/widget-diagnostics",
+      method: "POST",
+      headers: { Origin: "app://codex", "Content-Type": "application/json" },
+    }, {
+      stage: "unattached",
+      scriptLoaded: true,
+      attached: false,
+      target: "none",
+      editorCount: 1,
+      shadowRootCount: 0,
+      ignoredText: "must not be persisted",
+    });
+    assert.equal(report.status, 202);
+    assert.equal(report.json.ok, true);
+
+    const latest = await request(port, {
+      path: "/api/widget-diagnostics",
+      method: "GET",
+      headers: { Origin: "app://codex" },
+    });
+    assert.equal(latest.status, 200);
+    assert.equal(latest.json.diagnostic.stage, "unattached");
+    assert.equal(latest.json.diagnostic.scriptLoaded, true);
+    assert.equal(latest.json.diagnostic.editorCount, 1);
+    assert.equal(latest.json.diagnostic.ignoredText, undefined);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("dashboard saves and activates provider-model profiles without storing credentials", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-dashboard-profiles-"));
   const configPath = path.join(directory, "config.toml");

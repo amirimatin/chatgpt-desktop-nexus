@@ -3,7 +3,9 @@
   window.__codexNexusModelSwitcherLoaded = true;
 
   const DASHBOARD_URL = "http://127.0.0.1:4321";
+  const WIDGET_DIAGNOSTICS_URL = `${DASHBOARD_URL}/api/widget-diagnostics`;
   const WIDGET_ID = "codex-nexus-model-switcher-widget";
+  let lastDiagnosticSignature = "";
   const CHAT_HEADER_SELECTORS = [
     '[data-testid="conversation-header"]',
     '[data-testid="thread-header"]',
@@ -201,6 +203,36 @@
     </div>
   `;
 
+  function getMountTargetName(header) {
+    if (!header) return "none";
+    if (header.matches(".conversation-footer, .composer-wrap") || header.closest(".conversation-footer")) {
+      return "conversation-footer";
+    }
+    if (header.matches(COMPOSER_HEADER_SELECTORS.join(","))) return "composer-header";
+    if (header.matches(CHAT_HEADER_SELECTORS.join(","))) return "chat-header";
+    return "other";
+  }
+
+  function reportWidgetDiagnostic(header) {
+    const attached = Boolean(header && container.parentElement === header);
+    const snapshot = {
+      stage: attached ? "attached" : "unattached",
+      scriptLoaded: true,
+      attached,
+      target: getMountTargetName(header),
+      editorCount: document.querySelectorAll('textarea, [contenteditable="true"]').length,
+      shadowRootCount: Array.from(document.querySelectorAll("*")).filter((element) => element.shadowRoot).length,
+    };
+    const signature = JSON.stringify(snapshot);
+    if (signature === lastDiagnosticSignature) return;
+    lastDiagnosticSignature = signature;
+    fetch(WIDGET_DIAGNOSTICS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: signature,
+    }).catch(() => {});
+  }
+
   function findComposerHeader() {
     for (let index = 0; index < COMPOSER_HEADER_SELECTORS.length; index++) {
       const header = document.querySelector(COMPOSER_HEADER_SELECTORS[index]);
@@ -241,6 +273,7 @@
     const header = findChatHeader();
     if (!header) {
       container.style.display = "none";
+      reportWidgetDiagnostic(null);
       return false;
     }
     if (container.parentElement !== header) {
@@ -250,6 +283,7 @@
       else header.appendChild(container);
     }
     container.style.display = "block";
+    reportWidgetDiagnostic(header);
     return true;
   }
 

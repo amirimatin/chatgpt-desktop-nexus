@@ -86,6 +86,21 @@ function getDesktopStatus() {
   };
 }
 
+function normalizeWidgetDiagnostic(body) {
+  const stages = new Set(["attached", "unattached"]);
+  const targets = new Set(["chat-header", "composer-header", "conversation-footer", "other", "none"]);
+  const boundedCount = (value) => Number.isInteger(value) ? Math.max(0, Math.min(value, 1000)) : 0;
+  return {
+    receivedAt: new Date().toISOString(),
+    stage: stages.has(body.stage) ? body.stage : "unattached",
+    scriptLoaded: body.scriptLoaded === true,
+    attached: body.attached === true,
+    target: targets.has(body.target) ? body.target : "none",
+    editorCount: boundedCount(body.editorCount),
+    shadowRootCount: boundedCount(body.shadowRootCount),
+  };
+}
+
 function renderHtml() {
   return `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -908,6 +923,7 @@ function renderHtml() {
 }
 
 function createServer({ configPath, profilesPath } = {}) {
+  let latestWidgetDiagnostic = null;
   return http.createServer(async (req, res) => {
     const parsed = url.parse(req.url, true);
     const { pathname, query } = parsed;
@@ -939,6 +955,16 @@ function createServer({ configPath, profilesPath } = {}) {
         const config = readCodexModelConfig(configPath);
         const desktopTheme = getDesktopStatus();
         return sendJson(res, 200, { ok: true, config, desktopTheme });
+      }
+
+      // ── API: local model-widget diagnostics ──
+      if (pathname === "/api/widget-diagnostics" && req.method === "GET") {
+        return sendJson(res, 200, { ok: true, diagnostic: latestWidgetDiagnostic });
+      }
+
+      if (pathname === "/api/widget-diagnostics" && req.method === "POST") {
+        latestWidgetDiagnostic = normalizeWidgetDiagnostic(await parseJsonBody(req));
+        return sendJson(res, 202, { ok: true });
       }
 
       // ── API: Named provider-model profiles ──
