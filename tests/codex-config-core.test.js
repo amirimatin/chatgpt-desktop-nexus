@@ -150,15 +150,23 @@ test("codex custom provider CRUD works correctly", () => {
   const tokensEdited = JSON.parse(fs.readFileSync(tokensPath, "utf8"));
   assert.equal(tokensEdited.tokens["custom-2"], "sk-provider-two-new-key");
 
-  // Activating a provider makes its token Codex's active OPENAI_API_KEY.
+  // Activating a provider must not replace Codex's ChatGPT account state.
+  const authPath = path.join(dir, "auth.json");
+  const originalAuth = {
+    auth_mode: "chatgpt",
+    access_token: "chatgpt-account-token"
+  };
+  fs.writeFileSync(authPath, JSON.stringify(originalAuth, null, 2));
+  const configBeforeActivation = fs.readFileSync(file, "utf8");
   const switched = setActiveModelProvider("custom-2", file);
   assert.equal(switched.modelProvider, "custom-2");
   assert.equal(switched.provider.name, "Provider Two Edited");
-  const authPath = path.join(dir, "auth.json");
   const authSwitched = JSON.parse(fs.readFileSync(authPath, "utf8"));
-  assert.equal(authSwitched.OPENAI_API_KEY, "sk-provider-two-new-key");
-  assert.equal(authSwitched.tokens, undefined);
-  assert.equal(authSwitched.auth_mode, "apikey");
+  assert.deepEqual(authSwitched, originalAuth);
+  assert.equal(
+    fs.readFileSync(file, "utf8"),
+    configBeforeActivation.replace('model_provider = "custom-1"', 'model_provider = "custom-2"')
+  );
 
   // Switch back to default OpenAI
   const switchedOpenAi = setActiveModelProvider("openai", file);
@@ -182,7 +190,7 @@ test("codex custom provider CRUD works correctly", () => {
   assert.equal(tokensFinal.tokens["custom-1"], undefined);
 });
 
-test("codex config migrates raw env_key secrets to provider storage and requires_openai_auth", () => {
+test("codex config migrates legacy OpenAI-auth providers to provider-scoped command auth", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-config-"));
   const file = path.join(dir, "config.toml");
   fs.writeFileSync(file, [
@@ -191,33 +199,40 @@ test("codex config migrates raw env_key secrets to provider storage and requires
     "[model_providers.omni]",
     'name = "OmniRoute"',
     'base_url = "https://om.candocloud.ir/api"',
-    'env_key = "sk-56e69d80af06c02f-ce645b-e41d1700"',
     'wire_api = "responses"',
+    "requires_openai_auth = true",
     "",
   ].join("\n"));
+  const authPath = path.join(dir, "auth.json");
+  const originalAuth = {
+    auth_mode: "chatgpt",
+    access_token: "chatgpt-account-token"
+  };
+  fs.writeFileSync(authPath, JSON.stringify(originalAuth, null, 2));
+  fs.writeFileSync(path.join(dir, "provider-tokens.json"), JSON.stringify({
+    version: 1,
+    tokens: { omni: "secret-for-omni" }
+  }, null, 2));
 
   // Reading config triggers auto-migration
   const config = readCodexModelConfig(file);
   assert.equal(config.provider.id, "omni");
   assert.equal(config.provider.envKey, null);
-  assert.equal(config.provider.authMode, "openaiAuth");
-  assert.equal(config.provider.apiKey, "sk-56e69d80af06c02f-ce645b-e41d1700");
+  assert.equal(config.provider.apiKey, "secret-for-omni");
 
   // Check config.toml file was updated
   const rawToml = fs.readFileSync(file, "utf8");
-  assert.match(rawToml, /requires_openai_auth = true/);
-  assert.doesNotMatch(rawToml, /\[model_providers\.omni\.auth\]/);
-  assert.doesNotMatch(rawToml, /command = "node"/);
-  assert.doesNotMatch(rawToml, /env_key = "sk-/);
+  assert.match(rawToml, /\[model_providers\.omni\.auth\]/);
+  assert.match(rawToml, /command = "node"/);
+  assert.doesNotMatch(rawToml, /requires_openai_auth\s*=/);
+  assert.doesNotMatch(rawToml, /secret-for-omni/);
   assert.doesNotMatch(rawToml, /^env_key\s*=/m);
 
-  // The provider key is separate; auth.json contains only Codex's active key.
-  const authPath = path.join(dir, "auth.json");
+  // Provider migration preserves both provider storage and Codex's own login.
   const auth = JSON.parse(fs.readFileSync(authPath, "utf8"));
-  assert.equal(auth.tokens, undefined);
-  assert.equal(auth.OPENAI_API_KEY, "sk-56e69d80af06c02f-ce645b-e41d1700");
+  assert.deepEqual(auth, originalAuth);
   const tokens = JSON.parse(fs.readFileSync(path.join(dir, "provider-tokens.json"), "utf8"));
-  assert.equal(tokens.tokens.omni, "sk-56e69d80af06c02f-ce645b-e41d1700");
+  assert.equal(tokens.tokens.omni, "secret-for-omni");
 });
 
 test("provider model list normalizes OpenAI-compatible responses", async () => {

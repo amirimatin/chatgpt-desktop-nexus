@@ -1,6 +1,6 @@
 {
   "name": "codex-desktop-nexus",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Standalone Local Web Dashboard for Multi-Provider AI Model Management and Monokai Markdown Theme Engine for Codex Desktop & CLI",
   "main": "index.js",
   "bin": {
