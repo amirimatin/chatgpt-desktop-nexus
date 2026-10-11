@@ -178,6 +178,8 @@ npm run restore:desktop
 
 ## راهنمای رفع اشکال
 
+گزارش علت خطا، اصلاح سرور و آزمون های استفاده از Claude در Codex در [راهنمای سازگاری Claude با OmniRoute](docs/omniroute-claude-compat.md) ثبت شده است.
+
 | نشانه | بررسی و اقدام |
 | --- | --- |
 | `Codex Desktop app.asar was not found` | مطمئن شوید Codex Desktop یا ChatGPT Desktop نصب است و با `npm run status:desktop` مسیرهای تشخیص داده شده را بررسی کنید. پچر فقط مسیرهای رایج سیستم عامل را جستجو می کند. |

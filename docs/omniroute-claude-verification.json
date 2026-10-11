@@ -1,0 +1,78 @@
+{
+  "codex_cli_version": "0.160.0",
+  "server_image": "omniroute:3.8.51-codex-claude-fix-20261011",
+  "api_tests": [
+    {
+      "case": "sonnet-base",
+      "model": "cc/claude-sonnet-5",
+      "http": 200,
+      "status": "completed",
+      "text": "OK",
+      "passed": true
+    },
+    {
+      "case": "sonnet-high",
+      "model": "cc/claude-sonnet-5-high",
+      "http": 200,
+      "status": "completed",
+      "text": "OK",
+      "passed": true
+    },
+    {
+      "case": "opus-high",
+      "model": "cc/claude-opus-5-high",
+      "http": 200,
+      "status": "completed",
+      "text": "OK",
+      "passed": true
+    },
+    {
+      "case": "full-prefix",
+      "model": "claude/claude-sonnet-5-high",
+      "http": 200,
+      "status": "completed",
+      "text": "OK",
+      "passed": true
+    },
+    {
+      "case": "json-response",
+      "model": "cc/claude-sonnet-5",
+      "http": 200,
+      "status": "completed",
+      "text": "OK",
+      "passed": true
+    }
+  ],
+  "codex_tests": [
+    {
+      "model": "cc/claude-sonnet-5-high",
+      "exit_code": 0,
+      "shell_executions": 1,
+      "retries": [],
+      "passed": true
+    },
+    {
+      "model": "cc/claude-opus-5-high",
+      "exit_code": 0,
+      "shell_executions": 1,
+      "retries": [],
+      "passed": true
+    }
+  ],
+  "tool_roundtrip": {
+    "passed": true,
+    "model": "cc/claude-sonnet-5-high",
+    "function": "compat_echo",
+    "final": "smoke-claude",
+    "stage": "interim stream repair"
+  },
+  "invalid_model_rejected": true,
+  "raw_live_catalog_model_count": 14,
+  "raw_catalog_effort_metadata_count": 0,
+  "runtime_enriched_model_count": 11,
+  "unit_tests_passed": 28,
+  "native_messages_final_image": {
+    "http": 200,
+    "passed": true
+  }
+}
