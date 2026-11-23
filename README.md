@@ -105,6 +105,80 @@ journalctl --user -u codex-desktop-nexus.service -f
 ./bin/cli.js provider use omniroute antigravity/gemini-3.8-flash-high
 ```
 
+## کاتالوگ مدل Desktop
+
+از نسخه ۰.۱۷۱ به بعد، باکس چت Codex Desktop مدل خود را از کاتالوگ `model/list` در app-server می گیرد و مقدار `model` در `~/.codex/config.toml` فقط CLI و TUI را کنترل می کند. OmniRoute در `/v1/models` خروجی سبک OpenAI می دهد که کلید `id` دارد، در حالی که app-server کاتالوگی با کلید `slug` می خواهد. به همین دلیل `~/.codex/models_cache.json` خالی می ماند و Desktop به مدل پیش فرض داخلی خود (`gpt-6.2-sol`) برمی گردد.
+
+این فرمان کاتالوگ سازگار را از روی مدل های واقعی پرووایدر فعال می سازد:
+
+```bash
+./bin/cli.js catalog sync
+./bin/cli.js catalog status
+```
+
+`catalog sync` این کارها را انجام می دهد:
+
+1. فهرست مدل ها را از پرووایدر فعال می خواند.
+2. مدل های داخلی app-server را به عنوان قالب فیلدها استخراج می کند.
+3. مدل های انتخاب شده را با همان فیلدها در `~/.codex/model_catalog.json` می نویسد.
+4. کلید `model_catalog_json` را در `~/.codex/config.toml` تنظیم می کند.
+5. `~/.codex/models_cache.json` را پاک می کند تا کاتالوگ تازه خوانده شود.
+
+پس از اجرا باید Codex Desktop را کامل ببندید و دوباره باز کنید.
+
+### انجام همین کار از منوی Nexus
+
+منوی **⚡ Nexus** داخل Desktop دیگر فهرست مدل ثابت ندارد و مدل ها را از همین کاتابل تولیدشده می خواند:
+
+- **Select Model** مدل های کاتالوگ را نشان می دهد و برای فهرست های بلند آنها را گروه بندی می کند.
+- **♻️ Rebuild Model Catalog from Provider** همان `catalog sync` را از طریق داشبورد محلی اجرا می کند و نتیجه را در یک پیام نشان می دهد.
+
+این گزینه به داشبورد در حال اجرا روی `127.0.0.1:4321` نیاز دارد. اگر داشبورد بالا نباشد، پیام خطا همین را یادآوری می کند و می توانید به جای آن `./bin/cli.js catalog sync` را در ترمینال اجرا کنید.
+
+توجه: منوی Nexus مقدار `model` را در `config.toml` می نویسد که CLI و TUI را کنترل می کند. مدل پیش فرض باکس چت Desktop از ترتیب کاتالوگ و فهرست `pinned` می آید، پس برای تغییر پیش فرض چت، مدل مورد نظر را اول `pinned` بگذارید و `catalog sync` را اجرا کنید.
+
+### تنظیم فیلترها
+
+پرووایدر ممکن است هزاران مدل داشته باشد و ریختن همه آنها در منوی Desktop غیرعملی است. فیلترها در `~/.codex/nexus-catalog.json` نگهداری می شوند:
+
+به صورت پیش فرض **هیچ خانواده ای حذف نمی شود**: مدل های `combo`، `claude`، `antigravity`، `pcb`، `openrouter`، `devin-cli-agentic`، `minimax-code`، `openai` و `codex` همه واجد شرایط هستند. تنها معیار حذف، قابلیت فنی مدل است نه نام آن.
+
+```json
+{
+  "providerId": "omni",
+  "includeBuiltins": true,
+  "ownedBy": ["*"],
+  "include": [],
+  "exclude": [],
+  "requireToolCalling": true,
+  "requireTextOutput": true,
+  "trimInstructions": true,
+  "maxModels": 400,
+  "pinned": ["tsco", "development", "Intelcade"]
+}
+```
+
+| کلید | نقش |
+| --- | --- |
+| `providerId` | پرووایدر مرجع. اگر خالی باشد، پرووایدر فعال `config.toml` استفاده می شود. |
+| `includeBuiltins` | مدل های داخلی app-server را هم در فهرست نگه می دارد. |
+| `ownedBy` | مقدار `["*"]` یعنی همه خانواده ها. برای محدود کردن، نام ها را فهرست کنید مثل `["combo", "claude"]`. |
+| `include` | افزودن مدل هایی خارج از `ownedBy`، با glob مانند `cx/*` یا عبارت باقاعده مانند `/^openai\/gpt-6/`. |
+| `exclude` | همان قالب `include`، برای حذف. روی `pinned` اثر ندارد. |
+| `requireToolCalling` | مدل هایی که `capabilities.tool_calling` ندارند کنار گذاشته می شوند، چون در Codex قابل استفاده نیستند. |
+| `requireTextOutput` | مدل های صرفاً تصویری یا صوتی کنار گذاشته می شوند. |
+| `trimInstructions` | در هر مدل فقط `model_messages.instructions_template` نگه داشته می شود. این کار حجم کاتالوگ را از حدود ۱۴۰ مگابایت به حدود ۱۲ مگابایت کاهش می دهد. |
+| `maxModels` | سقف تعداد مدل های گرفته شده از پرووایدر. |
+| `pinned` | مدل هایی که همیشه و به همین ترتیب در ابتدای فهرست می آیند، فارغ از `exclude` و معیارهای قابلیت. اولین مورد، مدل پیش فرض چت جدید است. |
+
+### چرا سقف لازم است و چگونه عادلانه تقسیم می شود
+
+پرووایدر ممکن است هزاران مدل داشته باشد؛ در عمل OmniRoute حدود ۲۳۷۷ مدل برمی گرداند. ریختن همه آنها در منوی Desktop فایل کاتالوگ را بسیار بزرگ می کند و منو را غیرقابل استفاده می سازد. وقتی تعداد مدل های واجد شرایط از `maxModels` بیشتر شود، سهمیه به صورت نوبت گردشی بین خانواده ها تقسیم می شود تا یک خانواده بزرگ کل سهمیه را نگیرد. بنابراین خانواده کوچکی مثل `antigravity` حذف نمی شود، حتی وقتی خانواده ای مانند `pcb` بیش از هزار مدل دارد.
+
+اگر مدل خاصی برایتان مهم است، آن را در `pinned` بگذارید تا همیشه و بدون توجه به سهمیه در فهرست باشد. اگر مدلی را pin کنید که پرووایدر آن را ارائه نمی دهد، `catalog sync` نام آن را به عنوان هشدار گزارش می کند.
+
+بعد از هر تغییر فیلتر، یا هر بار که مدل یا combo تازه ای به پرووایدر اضافه شد، فقط `catalog sync` را دوباره اجرا کنید؛ نیازی به ویرایش دستی کاتالوگ نیست.
+
 ## اعمال patch روی Codex Desktop
 
 ### 1. Desktop را کامل ببندید
@@ -199,6 +273,8 @@ npm run restore:desktop
 | بازگردانی Desktop | `sudo npm run restore:desktop` |
 | فهرست پرووایدرها | `./bin/cli.js provider list` |
 | انتخاب مدل از خط فرمان | `./bin/cli.js provider use <provider-id> <model-name>` |
+| ساخت دوباره کاتالوگ مدل Desktop | `./bin/cli.js catalog sync` |
+| وضعیت کاتالوگ مدل | `./bin/cli.js catalog status` |
 | اجرای آزمون ها | `npm test` |
 
 ## محدودیت و نکته امنیتی
