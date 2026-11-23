@@ -19,6 +19,8 @@ Commands:
   status                    Check Codex Desktop installation and patch status
   provider list             List all configured model providers
   provider use <id> [model] Switch the active model provider
+  catalog sync              Rebuild the Desktop model catalog from the active provider
+  catalog status            Show the generated catalog and its filters
   help                      Show this help message
 
 Options:
@@ -29,6 +31,7 @@ Examples:
   codex-desktop-nexus patch
   codex-desktop-nexus service install
   codex-desktop-nexus provider use omniroute antigravity/gemini-3.8-flash-high
+  codex-desktop-nexus catalog sync
 `);
 }
 
@@ -87,6 +90,38 @@ switch (command) {
         core.writeCodexModelConfig(model);
       }
       console.log(`✓ Active provider set to "${providerId}"${model ? ` with model "${model}"` : ""}`);
+    } else {
+      printHelp();
+    }
+    break;
+  }
+  case "catalog": {
+    const sub = args[1] || "status";
+    const catalog = require("../lib/model-catalog-core");
+    if (sub === "sync") {
+      catalog.syncModelCatalog().then((result) => {
+        console.log(`\u2713 Catalog rebuilt from provider "${result.providerId}"`);
+        console.log(`  provider models seen: ${result.providerModelCount}`);
+        console.log(`  catalog models:       ${result.modelCount}`);
+        console.log(`  catalog file:         ${result.catalogPath}`);
+        console.log(`  config updated:       ${result.configChanged ? "yes" : "already set"}`);
+        console.log(`  models cache cleared: ${result.cacheCleared ? "yes" : "nothing to clear"}`);
+        if (result.missingPins && result.missingPins.length > 0) {
+          console.log(`\n! Pinned models the provider does not offer: ${result.missingPins.join(", ")}`);
+        }
+        console.log("\nRestart Codex Desktop to pick up the new catalog.");
+      }).catch((error) => {
+        console.error(`Error: ${error.message}`);
+        process.exit(1);
+      });
+    } else if (sub === "status") {
+      const state = catalog.catalogStatus();
+      console.log(`Catalog file:  ${state.catalogPath}`);
+      console.log(`Exists:        ${state.exists ? "yes" : "no"}`);
+      console.log(`Configured:    ${state.configured ? "yes" : "no"}`);
+      console.log(`Models:        ${state.modelCount}`);
+      console.log(`First slugs:   ${state.slugs.slice(0, 8).join(", ") || "—"}`);
+      console.log(`Filters:       ${JSON.stringify(state.settings)}`);
     } else {
       printHelp();
     }

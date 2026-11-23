@@ -24,6 +24,13 @@ const {
 } = require("../lib/nexus-profile-core");
 
 const {
+  catalogStatus,
+  readCatalogSettings,
+  syncModelCatalog,
+  writeCatalogSettings
+} = require("../lib/model-catalog-core");
+
+const {
   applyDesktopTheme,
   findCodexDesktopInstallation,
   inspectDesktopThemeStatus,
@@ -1010,6 +1017,31 @@ function createServer({ configPath, profilesPath } = {}) {
           return sendJson(res, 200, { ok: true, providerId, models: models || [] });
         } catch (err) {
           return sendError(res, 500, `Could not load provider models: ${err.message}`);
+        }
+      }
+
+      // ── API: Desktop model catalog ──
+      if (pathname === "/api/catalog" && req.method === "GET") {
+        return sendJson(res, 200, { ok: true, catalog: catalogStatus({ configPath }) });
+      }
+
+      if (pathname === "/api/catalog/settings" && req.method === "POST") {
+        const body = await parseJsonBody(req);
+        const settings = writeCatalogSettings(body.settings || body);
+        return sendJson(res, 200, { ok: true, settings });
+      }
+
+      if (pathname === "/api/catalog/sync" && req.method === "POST") {
+        try {
+          const result = await syncModelCatalog({ configPath });
+          return sendJson(res, 200, {
+            ok: true,
+            ...result,
+            slugs: result.slugs.slice(0, 20),
+            settings: readCatalogSettings()
+          });
+        } catch (err) {
+          return sendError(res, 500, `Could not rebuild the model catalog: ${err.message}`);
         }
       }
 
