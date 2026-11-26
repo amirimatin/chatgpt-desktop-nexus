@@ -5,6 +5,10 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {
+  computeAsarFileIntegrity,
+  detectCspCorruption,
+  findLegacyNativeMenuScripts,
+  isAsarIntegrityStale,
   THEME_STYLE_ID,
   WIDGET_SCRIPT_ID,
   NATIVE_MENU_MARKER,
@@ -22,7 +26,7 @@ const {
   restoreHtmlContentSecurityPolicy
 } = require("../lib/desktop-patch-core");
 
-function createMockAsar(filesMap, outPath) {
+function createMockAsar(filesMap, outPath, withIntegrity = false) {
   const header = { files: {} };
   let currentOffset = 0;
   const fileBuffers = [];
@@ -38,7 +42,8 @@ function createMockAsar(filesMap, outPath) {
     const fileName = parts[parts.length - 1];
     cur[fileName] = {
       size: buf.length,
-      offset: currentOffset.toString()
+      offset: currentOffset.toString(),
+      ...(withIntegrity ? { integrity: computeAsarFileIntegrity(buf) } : {})
     };
     currentOffset += buf.length;
     fileBuffers.push(buf);
@@ -106,8 +111,11 @@ test("patchHtmlContentSecurityPolicy preserves all original directives with HTML
 
   // Must retain 'self' in script-src (not truncated by &#39; entity)
   assert.ok(patched.includes("script-src &#39;self&#39;"), "script-src must retain &#39;self&#39;");
-  assert.ok(patched.includes("unsafe-inline"), "script-src must include unsafe-inline");
   assert.ok(patched.includes("sha256-"), "script-src must include widget sha256");
+  assert.ok(
+    !patched.includes("unsafe-inline") || patched.includes("style-src"),
+    "script-src must authorize the widget by hash instead of unsafe-inline"
+  );
   assert.ok(patched.includes("https://cdn.plaid.com"), "script-src must retain plaid url");
 
   // Must retain 'self' in connect-src
@@ -152,6 +160,78 @@ test("findElectronMainScript locates main script in asar", () => {
   assert.equal(findElectronMainScript(asarPath), null);
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+function loadInjectedWidgetHelpers() {
+  const patched = patchElectronMainScript("var x=1;");
+  const start = patched.indexOf("function __readCodexConfig");
+  const end = patched.indexOf("function __getNexusNativeMenu");
+  assert.ok(start !== -1 && end > start, "Injected helpers must be present");
+  const factory = new Function(
+    "require",
+    `${patched.slice(start, end)}; return { __readCodexConfig, __readNexusCatalog, __chunkMenuItems, __syncNexusCatalog };`
+  );
+  return factory(require);
+}
+
+test("widget reads its model list from the generated catalog", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-widget-"));
+  const codexDir = path.join(dir, ".codex");
+  fs.mkdirSync(codexDir, { recursive: true });
+  fs.writeFileSync(path.join(codexDir, "model_catalog.json"), JSON.stringify({
+    models: [
+      { slug: "tsco", display_name: "Tsco", visibility: "list" },
+      { slug: "cx/gpt-6-sol", display_name: "Gpt-6-sol (cx)", visibility: "list" },
+      { slug: "codex-auto-review", display_name: "Auto Review", visibility: "hide" },
+      { slug: 42, display_name: "bogus", visibility: "list" }
+    ]
+  }));
+
+  const helpers = loadInjectedWidgetHelpers();
+  const originalHome = os.homedir;
+  os.homedir = () => dir;
+  try {
+    const models = helpers.__readNexusCatalog();
+    assert.deepEqual(models, [
+      { slug: "tsco", label: "Tsco" },
+      { slug: "cx/gpt-6-sol", label: "Gpt-6-sol (cx)" }
+    ]);
+  } finally {
+    os.homedir = originalHome;
+  }
+});
+
+test("widget tolerates a missing or malformed catalog", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-widget-"));
+  const helpers = loadInjectedWidgetHelpers();
+  const originalHome = os.homedir;
+  os.homedir = () => dir;
+  try {
+    assert.deepEqual(helpers.__readNexusCatalog(), []);
+    fs.mkdirSync(path.join(dir, ".codex"), { recursive: true });
+    fs.writeFileSync(path.join(dir, ".codex", "model_catalog.json"), "not json");
+    assert.deepEqual(helpers.__readNexusCatalog(), []);
+  } finally {
+    os.homedir = originalHome;
+  }
+});
+
+test("widget groups long model lists and leaves short ones flat", () => {
+  const helpers = loadInjectedWidgetHelpers();
+  const items = Array.from({ length: 50 }, (_, index) => ({ label: `model-${index}` }));
+  const grouped = helpers.__chunkMenuItems(items);
+  assert.equal(grouped.length, 3);
+  assert.equal(grouped[0].submenu.length, 24);
+  assert.equal(grouped.reduce((total, group) => total + group.submenu.length, 0), 50);
+  assert.equal(helpers.__chunkMenuItems(items.slice(0, 10)).length, 10);
+});
+
+test("widget menu exposes the catalog rebuild action and no hardcoded model presets", () => {
+  const patched = patchElectronMainScript("var x=1;");
+  assert.ok(patched.includes("Rebuild Model Catalog from Provider"), "Must offer a catalog rebuild action");
+  assert.ok(patched.includes("/api/catalog/sync"), "Rebuild must call the dashboard sync endpoint");
+  assert.ok(!patched.includes("antigravity/gemini-3.8-flash-high"), "Must not ship hardcoded model presets");
+  assert.ok(!patched.includes("defaultModelsMap"), "Hardcoded model map must be gone");
 });
 
 test("patchElectronMainScript injects native menu into Electron main template", () => {
@@ -256,5 +336,138 @@ test("mock asar can be read, patched with the compact floating dropdown, and saf
   assert.equal(extractedRestoredHtml, originalHtml);
 
   // Cleanup
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("patchHtmlContentSecurityPolicy keeps raw-quoted CSP directives intact", () => {
+  // Newer Desktop builds write the CSP with raw apostrophes instead of &#39;.
+  const html = `<!doctype html><html><head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' https:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' wss://chatgpt.com;">
+  </head><body></body></html>`;
+
+  const patched = patchHtmlContentSecurityPolicy(html, "console.log('widget');");
+  const csp = patched.match(/<meta\s+http-equiv="Content-Security-Policy"[^>]*>/)[0].match(/content="([\s\S]*?)"/)[1];
+  const names = csp.split(";").map((d) => d.trim().split(" ")[0]).filter(Boolean);
+
+  assert.ok(csp.includes("default-src 'none'"), "default-src must keep its value");
+  assert.ok(csp.includes("wss://chatgpt.com"), "original connect-src sources must survive");
+  assert.ok(csp.includes("'wasm-unsafe-eval'"), "original script-src sources must survive");
+  assert.ok(csp.includes("http://127.0.0.1:*"), "dashboard origin must be authorized");
+  assert.equal(new Set(names).size, names.length, "no directive may be duplicated");
+  assert.equal(detectCspCorruption(patched), false);
+});
+
+test("detectCspCorruption recognizes a truncated-capture patch and the patcher repairs it", () => {
+  // Exactly the breakage produced by the previous regex against raw quotes:
+  // default-src lost its value and script-src/connect-src were duplicated.
+  const broken = `<!doctype html><html><head>
+    <meta http-equiv="Content-Security-Policy" content="default-src; script-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:*;'none'; img-src 'self' https:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' wss://chatgpt.com;">
+  </head><body></body></html>`;
+
+  assert.equal(detectCspCorruption(broken), true);
+
+  const repaired = restoreHtmlContentSecurityPolicy(broken);
+  const csp = repaired.match(/<meta\s+http-equiv="Content-Security-Policy"[^>]*>/)[0].match(/content="([\s\S]*?)"/)[1];
+
+  assert.ok(csp.includes("default-src 'none'"), "orphaned value must return to default-src");
+  assert.ok(csp.includes("'wasm-unsafe-eval'"), "duplicate script-src must be merged, not dropped");
+  assert.ok(csp.includes("wss://chatgpt.com"), "duplicate connect-src must be merged, not dropped");
+  assert.ok(!csp.includes("127.0.0.1"), "injected dashboard origin must be removed on restore");
+  assert.equal(detectCspCorruption(repaired), false);
+});
+
+test("findElectronMainScript resolves the package.json entry point of split bundles", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-desktop-entry-"));
+  const asarPath = path.join(tmpDir, "app.asar");
+  createMockAsar({
+    "package.json": JSON.stringify({ name: "mock-app", main: ".vite/build/early-bootstrap.js" }),
+    ".vite/build/early-bootstrap.js": "console.log('boot');",
+    ".vite/build/early-bootstrap-916-abc.js": "console.log('chunk');"
+  }, asarPath);
+
+  assert.equal(findElectronMainScript(asarPath), ".vite/build/early-bootstrap.js");
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("findLegacyNativeMenuScripts detects the marker in any build chunk", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-desktop-chunk-"));
+  const asarPath = path.join(tmpDir, "app.asar");
+  createMockAsar({
+    "package.json": JSON.stringify({ name: "mock-app", main: ".vite/build/early-bootstrap.js" }),
+    ".vite/build/early-bootstrap.js": "console.log('boot');",
+    ".vite/build/early-bootstrap-916-abc.js": `var ${NATIVE_MENU_MARKER} = true;`
+  }, asarPath);
+
+  assert.deepEqual(findLegacyNativeMenuScripts(asarPath), [".vite/build/early-bootstrap-916-abc.js"]);
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("patching an integrity-protected asar refreshes the embedded SHA256 entry", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-desktop-integrity-"));
+  const asarPath = path.join(tmpDir, "app.asar");
+  const originalHtml = `<!doctype html><html><head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; connect-src 'self' wss://chatgpt.com;">
+  </head><body><div id="root"></div></body></html>`;
+
+  createMockAsar({
+    "package.json": JSON.stringify({ name: "mock-app", version: "1.2.3", main: ".vite/build/early-bootstrap.js" }),
+    "webview/index.html": originalHtml,
+    ".vite/build/early-bootstrap.js": "console.log('boot');"
+  }, asarPath, true);
+
+  const target = resolveInstallationTarget(asarPath);
+  assert.equal(isAsarIntegrityStale(asarPath, "webview/index.html"), false);
+
+  const result = applyDesktopTheme(target);
+  assert.equal(result.changed, true);
+
+  const status = inspectDesktopThemeStatus(target);
+  assert.equal(status.integrityStale, false, "Electron would reject a stale integrity hash");
+  assert.equal(status.patched, true);
+  assert.equal(
+    isAsarIntegrityStale(asarPath, ".vite/build/early-bootstrap.js"),
+    false,
+    "untouched files must keep valid integrity entries"
+  );
+
+  restoreDesktopTheme(target);
+  assert.equal(isAsarIntegrityStale(asarPath, "webview/index.html"), false);
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("a backup from an older Desktop version is replaced instead of reused", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-desktop-stale-"));
+  const asarPath = path.join(tmpDir, "app.asar");
+  const html = `<!doctype html><html><head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; connect-src 'self';">
+  </head><body><div id="root"></div></body></html>`;
+
+  createMockAsar({
+    "package.json": JSON.stringify({ name: "mock-app", version: "2.0.0" }),
+    "webview/index.html": html
+  }, asarPath);
+
+  const target = resolveInstallationTarget(asarPath);
+  // Simulate a backup captured before the app update.
+  createMockAsar({
+    "package.json": JSON.stringify({ name: "mock-app", version: "1.0.0" }),
+    "webview/index.html": "<!doctype html><html><head></head><body>old</body></html>"
+  }, target.backupPath);
+
+  const result = applyDesktopTheme(target);
+  assert.equal(result.changed, true);
+  assert.equal(result.backupRefreshed, true, "stale backup must be rotated away");
+
+  const backupPkg = JSON.parse(extractFileFromAsar(target.backupPath, "package.json"));
+  assert.equal(backupPkg.version, "2.0.0", "backup must match the installed version");
+  const backupHtml = extractFileFromAsar(target.backupPath, "webview/index.html");
+  assert.ok(!backupHtml.includes(THEME_STYLE_ID), "backup must hold pristine markup");
+  assert.ok(!backupHtml.includes(WIDGET_SCRIPT_ID), "backup must hold pristine markup");
+
+  const restoreResult = restoreDesktopTheme(target);
+  assert.equal(restoreResult.restoredFromBackup, true);
+  const restoredHtml = extractFileFromAsar(target.asarPath, "webview/index.html");
+  assert.ok(!restoredHtml.includes(THEME_STYLE_ID));
+  assert.equal(detectCspCorruption(restoredHtml), false);
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

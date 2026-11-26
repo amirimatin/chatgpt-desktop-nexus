@@ -56,6 +56,9 @@ function main() {
     if (status.cspCorrupted) {
       console.log(`- Warning: Corrupted CSP detected from prior patch. Run with --force to repair.`);
     }
+    if (status.integrityStale) {
+      console.log(`- Warning: app.asar integrity hash is stale, so Electron rejects the patched webview. Run with --force to repair.`);
+    }
     console.log(`- Backup exists: ${status.hasBackup ? "✓ Yes" : "✗ No"}`);
     console.log(`- Installation writable: ${status.writable ? "✓ Yes" : "✗ No (requires sudo/admin)"}`);
     return;
@@ -92,6 +95,9 @@ function main() {
       console.log("✓ Monokai Markdown Theme & compact floating Model Switcher applied to Codex Desktop!");
       if (result.restoredMainScript) {
         console.log("  • Restored clean, crash-free Electron main script.");
+      }
+      if (result.backupRefreshed) {
+        console.log("  • Replaced a backup taken from an older Desktop version with a fresh one.");
       }
       console.log("  • Model Switcher appears as a compact model-name dropdown in the lower-right corner.");
       console.log("Please restart Codex Desktop to activate changes.");
